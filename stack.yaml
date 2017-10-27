@@ -1,0 +1,10 @@
+flags: {}
+packages:
+- '.'
+extra-deps:
+- HDBC-postgresql-2.3.2.5
+- HsSyck-0.53
+- dbmigrations-2.0.0
+- dbmigrations-postgresql-2.0.0
+- yaml-light-0.1.4
+resolver: lts-7.0

@@ -1,0 +1,97 @@
+name:                trade-leaf-api
+version:             0.0.0.1
+synopsis:            JSON API for tradeLeaf iOS/Android application
+description:         JSON API for tradeLeaf iOS/Android application
+license:             MIT
+license-file:        LICENSE
+author:              Pat Wentz
+maintainer:          patrick.w.wentz@gmail.com
+copyright:           2017 Pat Wentz
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.18
+
+source-repository head
+    type:
+        git
+    location:
+        https://www.github.com/pwentz/trade-leaf-api
+
+executable trade-leaf
+    main-is:
+        Main.hs
+    build-depends:
+        base >= 4.7 && < 5
+      , trade-leaf-api
+      , persistent-postgresql
+      , wai
+      , warp
+      , monad-logger
+      , safe
+    hs-source-dirs:
+        app
+    default-language:
+        Haskell2010
+
+library
+    default-language:
+        Haskell2010
+    hs-source-dirs:
+        src
+    exposed-modules:
+        Config
+      , Models
+      , Api
+      , Api.User
+      , Api.Auth
+      , Api.Error
+      , Utils
+    build-depends:
+        base >= 4.7 && < 5
+      , aeson
+      , bytestring
+      , monad-control
+      , monad-logger
+      , mtl
+      , persistent
+      , persistent-postgresql
+      , persistent-template
+      , servant
+      , servant-js
+      , servant-server
+      , transformers
+      , wai
+      , wai-extra
+      , warp
+      , exceptions
+      , fast-logger
+      , time
+      , validation
+      , lens
+      , safe
+      , text
+      , jwt
+      , containers
+      , bcrypt
+      , case-insensitive
+      , MissingH
+      , dbmigrations
+
+test-suite trade-leaf-api-test
+    type:
+        exitcode-stdio-1.0
+    hs-source-dirs:
+        test
+    main-is:
+        Spec.hs
+    other-modules:
+        Api.ErrorSpec
+    build-depends:
+        base
+      , trade-leaf-api
+      , QuickCheck
+      , hspec
+    ghc-options:
+        -threaded -rtsopts -with-rtsopts=-N
+    default-language:
+        Haskell2010

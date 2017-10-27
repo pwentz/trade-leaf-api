@@ -1,0 +1,5 @@
+exec: ../trade-leaf
+host: your.host.name.com
+
+plugins:
+    postgres: true
