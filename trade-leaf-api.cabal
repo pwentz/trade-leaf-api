@@ -76,6 +76,7 @@ library
       , case-insensitive
       , MissingH
       , dbmigrations
+      , esqueleto
 
 test-suite trade-leaf-api-test
     type:

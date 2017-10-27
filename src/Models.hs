@@ -35,6 +35,20 @@ share
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         password String
         deriving Show
+    Category json
+        name String
+        UniqueName name
+        createdAt UTCTime default=CURRENT_TIMESTAMP
+        updatedAt UTCTime default=CURRENT_TIMESTAMP
+        deriving Show
+    Offer json
+        userId UserId
+        categoryId CategoryId
+        cloudinaryId String Maybe
+        description String
+        createdAt UTCTime default=CURRENT_TIMESTAMP
+        updatedAt UTCTime default=CURRENT_TIMESTAMP
+        deriving Show
 |]
 
 -- doMigrations :: SqlPersistT IO ()

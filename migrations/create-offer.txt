@@ -1,0 +1,15 @@
+Description: Creates Offer table.
+Created: 2017-10-27 22:00:47.71093 UTC
+Depends: create-category create-user
+Apply: |
+  CREATE TABLE "offer" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "user_id" SERIAL8 REFERENCES "user",
+    "category_id" SERIAL8 REFERENCES "category",
+    "cloudinary_id" VARCHAR NULL,
+    "description" VARCHAR(80) NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "offer";
