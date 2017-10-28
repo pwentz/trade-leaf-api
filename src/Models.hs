@@ -52,6 +52,14 @@ share
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         deriving Show
+    Request json
+        offerId OfferId
+        UniqueOfferId offerId
+        categoryId CategoryId
+        description String
+        createdAt UTCTime default=CURRENT_TIMESTAMP
+        updatedAt UTCTime default=CURRENT_TIMESTAMP
+        deriving Show
 |]
 
 doMigrations :: SqlPersistT IO ()

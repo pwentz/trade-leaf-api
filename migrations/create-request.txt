@@ -1,0 +1,14 @@
+Description: Creates Request table.
+Created: 2017-10-28 20:41:32.395562 UTC
+Depends: create-offer create-category create-user
+Apply: |
+  CREATE TABLE "request" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "offer_id" SERIAL8 REFERENCES "offer" UNIQUE,
+    "category_id" SERIAL8 REFERENCES "category",
+    "description" VARCHAR(80) NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "request";

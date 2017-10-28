@@ -88,8 +88,10 @@ test-suite trade-leaf-api-test
     main-is:
         Spec.hs
     other-modules:
-        Api.ErrorSpec
+        SpecHelper
+      , Api.ErrorSpec
       , Db.UserSpec
+      , Db.MatchFinderSpec
       , UtilsSpec
       , CoordsSpec
     build-depends:
