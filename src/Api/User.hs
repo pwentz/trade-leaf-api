@@ -78,7 +78,7 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         Sql.insert
-                            (User (username userReq) time time (BS.unpack pass))
+                            (User (username userReq) (BS.unpack pass) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . Sql.fromSqlKey)
