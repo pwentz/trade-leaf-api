@@ -1,0 +1,12 @@
+Description: Creates category table.
+Created: 2017-10-27 21:30:28.359952 UTC
+Depends:
+Apply: |
+  CREATE TABLE "category" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "name" VARCHAR NOT NULL UNIQUE,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "category";

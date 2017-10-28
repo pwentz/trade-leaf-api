@@ -64,7 +64,7 @@ setLogger Production  = logStdout
 -- deployment application.
 makePool :: Environment -> IO ConnectionPool
 makePool Test =
-    runNoLoggingT (createPostgresqlPool (connStr "test") (envPool Test))
+    runNoLoggingT (createPostgresqlPool (connStr "_test") (envPool Test))
 makePool Development =
     runStdoutLoggingT (createPostgresqlPool (connStr "") (envPool Development))
 makePool Production = do

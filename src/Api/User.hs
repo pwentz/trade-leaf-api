@@ -20,16 +20,18 @@ import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
 import           Data.Int                    (Int64)
 import           Data.Time                   (getCurrentTime)
-import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
-                                              selectList)
-import           Debug.Trace                 (trace)
+import           Database.Esqueleto          (InnerJoin (InnerJoin), from, on,
+                                              select, val, where_, (==.), (^.))
+import qualified Database.Persist.Postgresql as Sql
 import           GHC.Generics                (Generic)
-import           Models                      (User (User), runDb, runSafeDb)
+import           Models                      (EntityField (OfferUserId, UserId, UserUsername),
+                                              Offer (Offer), User (User),
+                                              UserId, runDb, runSafeDb,
+                                              userUsername)
 import           Servant
 
 data UserRequest = UserRequest
     { username             :: String
-    , email                :: String
     , password             :: String
     , confirmationPassword :: String
     } deriving (Show, Generic)
@@ -37,16 +39,26 @@ data UserRequest = UserRequest
 instance FromJSON UserRequest
 
 type UserAPI
-     = "users" :> AuthProtect "jwt-auth" :> Get '[ JSON] [Entity User]
-     :<|> "users" :> ReqBody '[ JSON] UserRequest :> Post '[ JSON] Int64
+     = "users" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity User]
+     :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
+     :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity Offer]
 
 userServer :: ServerT UserAPI App
-userServer = allUsersAuth :<|> createUser
+userServer = allUsersAuth :<|> createUser :<|> authUserOffers
 
-allUsersAuth :: User -> App [Entity User]
+authUserOffers :: User -> App [Sql.Entity Offer]
+authUserOffers user =
+    runDb $
+      select $
+      from $ \(offers `InnerJoin` users) -> do
+      on (users ^. UserId ==. offers ^. OfferUserId)
+      where_ (users ^. UserUsername ==. val (userUsername user))
+      return offers
+
+allUsersAuth :: User -> App [Sql.Entity User]
 allUsersAuth user = do
     liftIO $ Prelude.putStr $ show user
-    runDb $ selectList [] []
+    runDb $ Sql.selectList [] []
 
 createUser :: UserRequest -> App Int64
 createUser userReq =
@@ -65,19 +77,15 @@ createUser userReq =
                 Just pass -> do
                     newUser <-
                         runSafeDb $
-                        insert
-                            (User
-                                 (username userReq)
-                                 time
-                                 time
-                                 (BS.unpack pass))
+                        Sql.insert
+                            (User (username userReq) (BS.unpack pass) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
-                        (return . fromSqlKey)
+                        (return . Sql.fromSqlKey)
                         newUser
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest n e p cp) =
-    UserRequest <$> pure n <*> pure e <*>
+validateUser (UserRequest n p cp) =
+    UserRequest <$> pure n <*>
     (Auth.confirmPassword p cp *> Auth.validatePasswordLength p *> pure p) <*>
     pure cp

@@ -76,6 +76,7 @@ library
       , case-insensitive
       , MissingH
       , dbmigrations
+      , esqueleto
 
 test-suite trade-leaf-api-test
     type:
@@ -86,11 +87,18 @@ test-suite trade-leaf-api-test
         Spec.hs
     other-modules:
         Api.ErrorSpec
+      , Db.UserSpec
     build-depends:
         base
       , trade-leaf-api
       , QuickCheck
       , hspec
+      , mtl
+      , persistent
+      , persistent-postgresql
+      , servant
+      , servant-server
+      , time
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N
     default-language:
