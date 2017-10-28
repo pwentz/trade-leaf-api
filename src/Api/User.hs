@@ -15,6 +15,7 @@ import           Config                      (App (..), Config (..), getConfig)
 import qualified Control.Monad.Except        as BE
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
+import           Coords                      (Coords, fromCoords)
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
@@ -34,6 +35,8 @@ data UserRequest = UserRequest
     { username             :: String
     , password             :: String
     , confirmationPassword :: String
+    , coords               :: Coords
+    , cloudinaryId         :: Maybe String
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
@@ -78,14 +81,14 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         Sql.insert
-                            (User (username userReq) (BS.unpack pass) time time)
+                            (User (username userReq) (BS.unpack pass) (cloudinaryId userReq) (fromCoords $ coords userReq) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . Sql.fromSqlKey)
                         newUser
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest n p cp) =
+validateUser (UserRequest n p cp coords cloudId) =
     UserRequest <$> pure n <*>
     (Auth.confirmPassword p cp *> Auth.validatePasswordLength p *> pure p) <*>
-    pure cp
+      pure cp <*> pure coords <*> pure cloudId

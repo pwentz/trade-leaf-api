@@ -38,10 +38,11 @@ setupTeardown :: (Config -> IO a) -> IO ()
 setupTeardown runTestsWith = do
     pool <- makePool Test
     cleanDb pool
+    migrateDb pool
     runTestsWith $ Config { getPool = pool
                           , getEnv = Test
                           , getJwtSecret = "trade-leaf-secret" }
-    migrateDb pool
+    return ()
   where
     migrateDb :: ConnectionPool -> IO ()
     migrateDb pool = runSqlPool doMigrations pool
@@ -50,6 +51,10 @@ setupTeardown runTestsWith = do
     deleteAllUsers :: ConnectionPool -> IO ()
     deleteAllUsers pool = do
         runSqlPool (deleteWhere ([] :: [Filter User])) pool
+
+defaultReq :: UserRequest
+defaultReq =
+  UserRequest "username" "password" "password" (0, 0) Nothing
 
 -- for more detail, see `src/Config.hs`, but this assumes you have...
 --   1. a Postgres `test` user
@@ -60,10 +65,9 @@ spec =
         describe "User" $ do
             it "createUser creates a new user from a request" $ \config -> do
                 time <- liftIO getCurrentTime
-                let userReq = UserRequest "username" "super secret password" "super secret password"
                 dbUser <-
                     runAppToIO config $ do
-                        userId <- createUser userReq
+                        userId <- createUser defaultReq
                         mbUser <- runDb $ get (toSqlKey userId :: Key User)
                         return (userUsername <$> mbUser)
                 dbUser `shouldBe` (Just "username")

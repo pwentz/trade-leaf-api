@@ -5,5 +5,6 @@ extra-deps:
 - HsSyck-0.53
 - dbmigrations-2.0.0
 - esqueleto-2.5.3
+- gps-1.2
 - yaml-light-0.1.4
 resolver: lts-7.0

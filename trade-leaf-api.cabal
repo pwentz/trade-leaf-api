@@ -46,6 +46,7 @@ library
       , Api.Auth
       , Api.Error
       , Utils
+      , Coords
     build-depends:
         base >= 4.7 && < 5
       , aeson
@@ -77,6 +78,7 @@ library
       , MissingH
       , dbmigrations
       , esqueleto
+      , gps
 
 test-suite trade-leaf-api-test
     type:
@@ -88,6 +90,8 @@ test-suite trade-leaf-api-test
     other-modules:
         Api.ErrorSpec
       , Db.UserSpec
+      , UtilsSpec
+      , CoordsSpec
     build-depends:
         base
       , trade-leaf-api
