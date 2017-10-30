@@ -48,6 +48,43 @@ dbSetup =
     request3Key <- runDb $ Sql.insert (Request offer3Key artCatKey "i've always wanted a painting" time time)
     return (currentUser time)
 
+complexDbSetup :: App User
+complexDbSetup =
+  let
+    currentUser time =
+      User "pat" "password" Nothing "41.938132,-87.642753" time time
+  in do
+    time <- liftIO getCurrentTime
+    handyCatKey <- runDb $ Sql.insert (Category "handywork" time time)
+    artCatKey <- runDb $ Sql.insert (Category "decorative art" time time)
+    babysitCatKey <- runDb $ Sql.insert (Category "babysitter" time time)
+    currUserKey <- runDb $ Sql.insert (currentUser time)
+    currUserOffer1 <- runDb $ Sql.insert (Offer currUserKey artCatKey Nothing "i offer painting" 999 time time)
+    currUserOffer2 <- runDb $ Sql.insert (Offer currUserKey babysitCatKey Nothing "i will sit baby" 15 time time)
+    _ <- runDb $ Sql.insert (Request currUserOffer1 handyCatKey "sand fence plz" time time)
+    _ <- runDb $ Sql.insert (Request currUserOffer2 artCatKey "i need painting" time time)
+    {-| 6 miles from currentUser -}
+    user1Key <- runDb $ Sql.insert (User "Otto" "password" Nothing "41.858210,-87.651700" time time)
+    user1Offer <- runDb $ Sql.insert (Offer user1Key handyCatKey Nothing "i sand fence" 10 time time)
+    _ <- runDb $ Sql.insert (Request user1Offer artCatKey "i like painting plz" time time)
+    {-| 4 miles from currentUser -}
+    user2Key <- runDb $ Sql.insert (User "Tim" "password" Nothing "41.888730,-87.687969" time time)
+    user2Offer <- runDb $ Sql.insert (Offer user2Key handyCatKey Nothing "i've sanded once" 1 time time)
+    _ <- runDb $ Sql.insert (Request user2Offer artCatKey "i've always wanted a painting" time time)
+    {-| 18 miles from currentUser -}
+    user3Key <- runDb $ Sql.insert (User "Theron" "password" Nothing "41.680753,-87.698157" time time)
+    user3Offer <- runDb $ Sql.insert (Offer user3Key artCatKey Nothing "warhol" 20 time time)
+    _ <- runDb $ Sql.insert (Request user3Offer babysitCatKey "my baby needs sitting" time time)
+    {-| 14 miles from currentUser -}
+    user4Key <- runDb $ Sql.insert (User "Felicia" "password" Nothing "41.734517,-87.674043" time time)
+    user4Offer <- runDb $ Sql.insert (Offer user4Key artCatKey Nothing "i fingerpainted" 10 time time)
+    _ <- runDb $ Sql.insert (Request user4Offer babysitCatKey "SIT ON MY BABY" time time)
+    {-| 9 miles from currentUser -}
+    user5Key <- runDb $ Sql.insert (User "Phil" "password" Nothing "41.804575,-87.671359" time time)
+    user5Offer <- runDb $ Sql.insert (Offer user5Key artCatKey Nothing "it is abstract" 10 time time)
+    _ <- runDb $ Sql.insert (Request user5Offer babysitCatKey "watch all the kids" time time)
+    return (currentUser time)
+
 spec :: Spec
 spec = do
     around setupTeardown $ do
@@ -58,3 +95,13 @@ spec = do
                   offers <- findMatches currUser
                   return ((offerDescription . Sql.entityVal) <$> offers)
               offerDescrips `shouldBe` ["i sand fence", "i've sanded once"]
+            it "can get all users for offers within a given radius" $ \config -> do
+              {-| Can find offers that are within distance of that user's offer radius,
+                  but fails to rule out offers that are out of range for currentUser's offer radius (see user3)
+              -}
+              potentialMatches <- runAppToIO config $ do
+                  currUser <- complexDbSetup
+                  matchesByUser <- findMatchesInRadius currUser
+                  matches <- findWithinRadius currUser matchesByUser
+                  return ((offerDescription . Sql.entityVal) <$> matches)
+              potentialMatches `shouldBe` ["i sand fence", "it is abstract"]
