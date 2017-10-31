@@ -3,15 +3,13 @@ module Db.MatchFinderSpec where
 import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Time                   (getCurrentTime)
+import           Database.Persist            (get)
 import qualified Database.Persist.Postgresql as Sql
-import Database.Persist (get)
-import           Models                      (Category (Category),
-                                              Offer (Offer), Request (Request),
-                                              User (User), runDb, offerDescription, userUsername)
+import           MatchFinder
+import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 import           Test.Hspec
 import           Test.QuickCheck
-import MatchFinder
 
 {-|
     As a user,
@@ -95,6 +93,13 @@ spec = do
                   offers <- findMatches currUser
                   return ((offerDescription . Sql.entityVal) <$> offers)
               offerDescrips `shouldBe` ["i sand fence", "i've sanded once"]
+            it "can find a user's matching offers by offer" $ \config -> do
+              potentialMatches <- runAppToIO config $ do
+                  currUser <- complexDbSetup
+                  mbOffer <- runDb $ Sql.selectFirst [OfferDescription Sql.==. "warhol"] []
+                  mbMatches <- traverse (findUserMatches currUser . Sql.entityVal) mbOffer
+                  return $ (fmap . fmap) (offerDescription . Sql.entityVal) mbMatches
+              potentialMatches `shouldBe` (Just ["i will sit baby"])
             it "can get all users for offers within a given radius" $ \config -> do
               {-| Can find offers that are within distance of that user's offer radius,
                   but fails to rule out offers that are out of range for currentUser's offer radius (see user3)
