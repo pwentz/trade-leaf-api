@@ -14,13 +14,15 @@ import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
 import           Database.Persist.Sql        (get, toSqlKey)
 import           Servant
 
-import           Api.User                    (UserRequest (..), createUser)
+import           Api.User                    (UserLocation (..),
+                                              UserRequest (..), createUser)
 import           Data.Time                   (getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
-defaultReq = UserRequest "username" "password" "password" (0, 0) Nothing
+defaultReq =
+    UserRequest "username" "password" "password" (UserLocation 0 0) Nothing
 
 -- for more detail, see `src/Config.hs`, but this assumes you have...
 --   1. a Postgres `test` user

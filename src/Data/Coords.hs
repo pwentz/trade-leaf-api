@@ -1,4 +1,4 @@
-module Coords
+module Data.Coords
     ( toCoords
     , distanceInMiles
     , fromCoords

@@ -1,6 +1,6 @@
 module CoordsSpec where
 
-import Coords
+import Data.Coords
 import Test.Hspec
 import Test.QuickCheck
 

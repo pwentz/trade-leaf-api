@@ -88,25 +88,21 @@ spec = do
     around setupTeardown $ do
         describe "MatchFinderSpec" $ do
             it "can get all offers with requests matching category on user offers" $ \config -> do
-              offerDescrips <- runAppToIO config $ do
+              matchDescriptions <- runAppToIO config $ do
                   currUser <- dbSetup
                   offers <- findMatches currUser
                   return ((offerDescription . Sql.entityVal) <$> offers)
-              offerDescrips `shouldBe` ["i sand fence", "i've sanded once"]
+              matchDescriptions `shouldBe` ["i sand fence", "i've sanded once"]
             it "can find a user's matching offers by offer" $ \config -> do
-              potentialMatches <- runAppToIO config $ do
+              matchDescriptions <- runAppToIO config $ do
                   currUser <- complexDbSetup
                   mbOffer <- runDb $ Sql.selectFirst [OfferDescription Sql.==. "warhol"] []
                   mbMatches <- traverse (findUserMatches currUser . Sql.entityVal) mbOffer
                   return $ (fmap . fmap) (offerDescription . Sql.entityVal) mbMatches
-              potentialMatches `shouldBe` (Just ["i will sit baby"])
+              matchDescriptions `shouldBe` (Just ["i will sit baby"])
             it "can get all users for offers within a given radius" $ \config -> do
-              {-| Can find offers that are within distance of that user's offer radius,
-                  but fails to rule out offers that are out of range for currentUser's offer radius (see user3)
-              -}
-              potentialMatches <- runAppToIO config $ do
+              matchDescriptions <- runAppToIO config $ do
                   currUser <- complexDbSetup
-                  matchesByUser <- findMatchesInRadius currUser
-                  matches <- findWithinRadius currUser matchesByUser
+                  matches <- findMatchesWithinRadius currUser
                   return ((offerDescription . Sql.entityVal) <$> matches)
-              potentialMatches `shouldBe` ["i sand fence", "it is abstract"]
+              matchDescriptions `shouldBe` ["i sand fence", "it is abstract"]

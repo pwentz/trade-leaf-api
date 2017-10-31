@@ -83,7 +83,7 @@ validateAuthToken token = do
     maybe
         (throwError $ apiErr (E401, InvalidOrMissingToken))
         lookUpUser
-        ((verifyToken jwtSecret) >>= maybeKeyFromToken)
+        (verifyToken jwtSecret >>= maybeKeyFromToken)
   where
     (_, tkn) = T.breakOnEnd " " $ decodeUtf8 token
     verifyToken scrt = verify (secret $ T.pack scrt) =<< (decode tkn)
@@ -99,9 +99,7 @@ getKeyFromToken cs =
 lookUpUser :: String -> Servant.Handler User
 lookUpUser key = do
     cfg <- liftIO getConfig
-    enter (convertAppx cfg) appUser
-  where
-    appUser = userFromDb key
+    enter (convertAppx cfg) (userFromDb key)
 
 convertAppx :: Config -> App :~> BE.ExceptT ServantErr IO
 convertAppx cfg = Nat (flip runReaderT cfg . runApp)
@@ -145,14 +143,11 @@ doPasswordsMatch authEntry userToAuth =
         (BS.pack $ T.unpack $ authPassword authEntry)
 
 validatePasswordLength :: String -> Either ApiErr String
-validatePasswordLength p =
-    let l = length p
-    in if l >= 6
-           then Right p
-           else Left PasswordLengthLT6
+validatePasswordLength p
+    | length p >= 6 = Right p
+    | otherwise = Left PasswordLengthLT6
 
 confirmPassword :: String -> String -> Either ApiErr String
-confirmPassword p cp =
-    if cp == p
-        then Right p
-        else Left PasswordConfirmationMismatch
+confirmPassword p cp
+    | cp == p = Right p
+    | otherwise = Left PasswordConfirmationMismatch

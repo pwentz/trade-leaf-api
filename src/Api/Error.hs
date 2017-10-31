@@ -130,5 +130,5 @@ getDetailsFromDetailField =
 
 readableField :: Char -> String -> String
 readableField char acc
-    | elem char ("(=)" :: String) || char == '_' = acc
+    | elem char ("(=)_" :: String) = acc
     | otherwise = char : acc
