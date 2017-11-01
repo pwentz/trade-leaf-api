@@ -48,9 +48,9 @@ setLogger Production  = logStdout
 
 makePool :: Environment -> IO ConnectionPool
 makePool Test =
-    runNoLoggingT (createPostgresqlPool (connStr "_test") (envPool Test))
+    connStr "_test" >>= \conn -> runNoLoggingT (createPostgresqlPool conn (envPool Test))
 makePool Development =
-    runStdoutLoggingT (createPostgresqlPool (connStr "") (envPool Development))
+    connStr "" >>= \conn -> runStdoutLoggingT (createPostgresqlPool conn (envPool Development))
 makePool Production = do
     pool <- runMaybeT $ do
         let keys = [ "host="
@@ -78,8 +78,13 @@ envPool Test        = 1
 envPool Development = 1
 envPool Production  = 8
 
-connStr :: BS.ByteString -> ConnectionString
-connStr sfx = "host=localhost dbname=trade_leaf" <> sfx <> " user=patrickwentz port=5432"
+connStr :: BS.ByteString -> IO ConnectionString
+connStr sfx =
+  let
+    buildConnStr user =
+      "host=localhost dbname=trade_leaf" <> sfx <> " user=" <> (BS.pack user) <> " port=5432"
+  in
+    buildConnStr <$> lookupRequired "USER"
 
 getConfig :: IO Config
 getConfig = do
