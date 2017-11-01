@@ -15,15 +15,15 @@ import           Config                      (App (..), Config (..), getConfig)
 import qualified Control.Monad.Except        as BE
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
+import           Data.Coords                 (Coords, fromCoords)
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
 import           Data.Int                    (Int64)
 import           Data.Time                   (getCurrentTime)
-import           Database.Esqueleto          (InnerJoin (InnerJoin), from, on,
-                                              select, val, where_, (==.), (^.))
 import qualified Database.Persist.Postgresql as Sql
 import           GHC.Generics                (Generic)
+import           MatchFinder                 (findMatches)
 import           Models                      (EntityField (OfferUserId, UserId, UserUsername),
                                               Offer (Offer), User (User),
                                               UserId, runDb, runSafeDb,
@@ -34,9 +34,18 @@ data UserRequest = UserRequest
     { username             :: String
     , password             :: String
     , confirmationPassword :: String
+    , location             :: UserLocation
+    , cloudinaryId         :: Maybe String
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
+
+data UserLocation = UserLocation
+  { lat :: Double
+  , lng :: Double
+  } deriving (Show, Generic)
+
+instance FromJSON UserLocation
 
 type UserAPI
      = "users" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity User]
@@ -44,16 +53,7 @@ type UserAPI
      :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity Offer]
 
 userServer :: ServerT UserAPI App
-userServer = allUsersAuth :<|> createUser :<|> authUserOffers
-
-authUserOffers :: User -> App [Sql.Entity Offer]
-authUserOffers user =
-    runDb $
-      select $
-      from $ \(offers `InnerJoin` users) -> do
-      on (users ^. UserId ==. offers ^. OfferUserId)
-      where_ (users ^. UserUsername ==. val (userUsername user))
-      return offers
+userServer = allUsersAuth :<|> createUser :<|> findMatches
 
 allUsersAuth :: User -> App [Sql.Entity User]
 allUsersAuth user = do
@@ -78,14 +78,17 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         Sql.insert
-                            (User (username userReq) (BS.unpack pass) time time)
+                            (User (username userReq) (BS.unpack pass) (cloudinaryId userReq) (fromLocation $ location userReq) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . Sql.fromSqlKey)
                         newUser
+                          where
+                            fromLocation (UserLocation lat lng) =
+                              fromCoords (lat, lng)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest n p cp) =
+validateUser (UserRequest n p cp location cloudId) =
     UserRequest <$> pure n <*>
     (Auth.confirmPassword p cp *> Auth.validatePasswordLength p *> pure p) <*>
-    pure cp
+      pure cp <*> pure location <*> pure cloudId

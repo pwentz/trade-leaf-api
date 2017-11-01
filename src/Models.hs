@@ -32,6 +32,8 @@ share
         username String
         UniqueUsername username
         password String
+        cloudinaryId String Maybe
+        coordinates String
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         deriving Show
@@ -46,21 +48,19 @@ share
         categoryId CategoryId
         cloudinaryId String Maybe
         description String
+        radius Double default='Infinity'
+        createdAt UTCTime default=CURRENT_TIMESTAMP
+        updatedAt UTCTime default=CURRENT_TIMESTAMP
+        deriving Show
+    Request json
+        offerId OfferId
+        UniqueOfferId offerId
+        categoryId CategoryId
+        description String
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         deriving Show
 |]
-
-instance Eq User where
-    (User un pw _ _) == (User un' pw' _ _) = (un == un') && (pw == pw')
-
-instance Eq Category where
-    (Category name _ _) == (Category name' _ _) = name == name'
-
-instance Eq Offer where
-    (Offer uid cid cloudId desc _ _) == (Offer uid' cid' cloudId' desc' _ _) =
-        (uid == uid') &&
-        (cid == cid') && (cloudId == cloudId') && (desc == desc')
 
 doMigrations :: SqlPersistT IO ()
 doMigrations = runMigration migrateAll

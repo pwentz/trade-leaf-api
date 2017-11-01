@@ -17,7 +17,7 @@ import           Data.Int                         (Int64)
 import           Database.Persist.Postgresql      (Entity (..), fromSqlKey,
                                                    insert, selectFirst,
                                                    selectList, (==.))
-import           Models
+import           Models                           (User)
 import           Network.Wai                      (Application, Request)
 import           Servant
 import           Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
