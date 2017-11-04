@@ -22,11 +22,8 @@ import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
 defaultReq =
-    UserRequest "username" "password" "password" (UserLocation 0 0) Nothing
+    UserRequest "username" "password" "password" (UserLocation 0 0)
 
--- for more detail, see `src/Config.hs`, but this assumes you have...
---   1. a Postgres `test` user
---   2. a `perservant-test` DB
 spec :: Spec
 spec =
     around setupTeardown $ do

@@ -36,7 +36,7 @@ share
         coordinates String
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
-        deriving Show
+        deriving Show Eq
     Category json
         name String
         UniqueName name

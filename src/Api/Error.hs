@@ -4,7 +4,7 @@
 module Api.Error
     ( ApiErr(PasswordLengthLT6, PasswordConfirmationMismatch,
        InvalidOrMissingToken, AuthedUserNotFound, UserNotFound,
-       InvalidPassword, MissingAuthHeader, CustomError)
+       InvalidCredentials, MissingAuthHeader, CustomError)
     , apiErr
     , sqlError
     , StatusCode(..)
@@ -17,6 +17,7 @@ import           Data.Bifunctor             (bimap)
 import           Data.ByteString.Char8      (pack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.CaseInsensitive       (mk)
+import           Data.Int                   (Int64)
 import           Data.List                  (dropWhileEnd, isInfixOf)
 import           Data.List.Utils            (split)
 import           Data.Maybe                 (fromMaybe)
@@ -29,8 +30,8 @@ data ApiErr
     | PasswordConfirmationMismatch
     | InvalidOrMissingToken
     | AuthedUserNotFound
-    | UserNotFound
-    | InvalidPassword
+    | UserNotFound Int64
+    | InvalidCredentials
     | MissingAuthHeader
     | SqlError String
     | CustomError String
@@ -82,8 +83,8 @@ msgFromErr err =
         InvalidOrMissingToken -> "Invalid or missing auth token."
         AuthedUserNotFound ->
             "Could not find user associated with given auth token."
-        UserNotFound -> "Invalid username or password."
-        InvalidPassword -> "Invalid username or password."
+        UserNotFound userId -> "Could not find user with id of " ++ (show userId)
+        InvalidCredentials -> "Invalid username or password."
         MissingAuthHeader -> "Missing 'Authorization' header in request."
         SqlError sqlErr -> sqlErr
         CustomError msg -> msg

@@ -12,6 +12,7 @@ import           Data.Aeson                       (FromJSON, Result (..),
                                                    fromJSON)
 import qualified Data.ByteString.Char8            as BS
 import qualified Data.ByteString.Lazy.Char8       as LBS
+import           Data.Int                         (Int64)
 import qualified Data.Map                         as Map
 import qualified Data.Text                        as T
 import           GHC.Generics                     (Generic)
@@ -30,7 +31,7 @@ import           Control.Monad.IO.Class           (liftIO)
 import           Control.Monad.Reader             (runReaderT)
 import           Data.Text.Encoding               (decodeUtf8)
 import           Database.Persist.Postgresql      (Entity, entityVal,
-                                                   selectFirst, (==.))
+                                                   selectFirst, (==.), fromSqlKey, entityKey)
 import           Network.Wai                      (Request, requestHeaders)
 import           Servant                          ((:<|>), (:>), (:~>) (Nat),
                                                    AuthProtect, Handler, JSON,
@@ -46,7 +47,7 @@ import           Web.JWT                          (Algorithm (HS256), JWT,
                                                    unregisteredClaims, verify)
 
 data UserAuth = UserAuth
-    { authName :: T.Text
+    { authUserId :: Int64
     , token    :: Maybe T.Text
     } deriving (Show, Generic)
 
@@ -105,12 +106,9 @@ convertAppx :: Config -> App :~> BE.ExceptT ServantErr IO
 convertAppx cfg = Nat (flip runReaderT cfg . runApp)
 
 userFromDb :: String -> App User
-userFromDb str = do
-    maybeUser <- runDb (selectFirst [UserUsername ==. str] [])
-    maybe
-        (throwError $ apiErr (E404, AuthedUserNotFound))
-        (return . entityVal)
-        maybeUser
+userFromDb str =
+  runDb (selectFirst [UserUsername ==. str] []) >>=
+    maybe (throwError $ apiErr (E404, AuthedUserNotFound)) (return . entityVal)
 
 encodePassword :: String -> IO (Maybe BS.ByteString)
 encodePassword = hashPasswordUsingPolicy fastBcryptHashingPolicy . BS.pack
@@ -120,13 +118,13 @@ authUser authEntry = do
     jwtSecret <- liftIO (getJwtSecret <$> getConfig)
     maybeUser <- runDb (selectFirst [UserUsername ==. (T.unpack uName)] [])
     case maybeUser of
-        Nothing -> throwError (apiErr (E404, UserNotFound))
+        Nothing -> throwError (apiErr (E404, InvalidCredentials))
         Just person
             | doPasswordsMatch authEntry person ->
                 return $
                 UserAuth
-                {authName = uName, token = Just (tokenFromSecret jwtSecret)}
-            | otherwise -> throwError $ apiErr (E400, InvalidPassword)
+                {authUserId = (fromSqlKey (entityKey person)), token = Just (tokenFromSecret jwtSecret)}
+            | otherwise -> throwError $ apiErr (E400, InvalidCredentials)
   where
     uName = authUsername authEntry
     cs =
