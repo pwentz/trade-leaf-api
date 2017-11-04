@@ -15,20 +15,20 @@ import           Config                      (App (..), Config (..), getConfig)
 import qualified Control.Monad.Except        as BE
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
-import           Data.Coords                 (Coords, fromCoords)
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
+import           Data.Coords                 (Coords, fromCoords)
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
 import           Data.Time                   (getCurrentTime)
-import qualified Database.Persist.Postgresql as Sql
+import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
+                                              insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
 import           MatchFinder                 (findMatches)
-import           Models                      (EntityField (OfferUserId, UserId, UserUsername),
-                                              Offer (Offer), User (User),
-                                              UserId, runDb, runSafeDb,
-                                              userUsername)
+import           Models                      (EntityField (UserCoordinates),
+                                              Offer (Offer), User (User), runDb,
+                                              runSafeDb, userUsername)
 import           Servant
 
 data UserRequest = UserRequest
@@ -48,27 +48,25 @@ data UserLocation = UserLocation
 instance FromJSON UserLocation
 
 type UserAPI
-    = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Sql.Entity User)
+    = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
-     :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity Offer]
+     :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Entity Offer]
+     :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Post '[JSON] ()
 
 userServer :: ServerT UserAPI App
-userServer = userInfo :<|> createUser :<|> findMatches
+userServer = userInfo :<|> createUser :<|> findMatches :<|> updateCoords
 
-userInfo :: Int64 -> User -> App (Sql.Entity User)
+getUser :: Int64 -> App (Maybe User)
+getUser = runDb . get . toSqlKey
+
+userInfo :: Int64 -> User -> App (Entity User)
 userInfo userId user = do
-  mbUser <- runDb $ Sql.get (Sql.toSqlKey userId :: Sql.Key User)
+  mbUser <- getUser userId
   if fromMaybe False (((== user)) <$> mbUser)
      then
-      return (Sql.Entity (Sql.toSqlKey userId) user)
+      return (Entity (toSqlKey userId) user)
      else
-      throwError $
-        apiErr (E401, CustomError "User requested does not match user associated with provided auth token.")
-
-allUsersAuth :: User -> App [Sql.Entity User]
-allUsersAuth user = do
-    liftIO $ Prelude.putStr $ show user
-    runDb $ Sql.selectList [] []
+      throwError $ apiErr (E401, RequestedUserNotAuth)
 
 createUser :: UserRequest -> App Int64
 createUser userReq =
@@ -87,15 +85,24 @@ createUser userReq =
                 Just pass -> do
                     newUser <-
                         runSafeDb $
-                        Sql.insert
+                        insert
                             (User (username userReq) (BS.unpack pass) Nothing (fromLocation $ location userReq) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
-                        (return . Sql.fromSqlKey)
+                        (return . fromSqlKey)
                         newUser
                           where
                             fromLocation (UserLocation lat lng) =
                               fromCoords (lat, lng)
+
+updateCoords :: Int64 -> UserLocation -> User -> App ()
+updateCoords userId (UserLocation lat lng) user = do
+  requestedUser <- getUser userId
+  if fromMaybe False ((== user) <$> requestedUser)
+     then
+      runDb $ update (toSqlKey userId) [UserCoordinates =. (fromCoords (lat, lng))]
+     else
+      throwError $ apiErr (E401, RequestedUserNotAuth)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser (UserRequest u p pc location) =

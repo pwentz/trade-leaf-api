@@ -4,7 +4,7 @@
 module Api.Error
     ( ApiErr(PasswordLengthLT6, PasswordConfirmationMismatch,
        InvalidOrMissingToken, AuthedUserNotFound, UserNotFound,
-       InvalidCredentials, MissingAuthHeader, CustomError)
+       InvalidCredentials, MissingAuthHeader, CustomError, RequestedUserNotAuth)
     , apiErr
     , sqlError
     , StatusCode(..)
@@ -34,6 +34,7 @@ data ApiErr
     | InvalidCredentials
     | MissingAuthHeader
     | SqlError String
+    | RequestedUserNotAuth
     | CustomError String
     deriving (Show)
 
@@ -86,6 +87,7 @@ msgFromErr err =
         UserNotFound userId -> "Could not find user with id of " ++ (show userId)
         InvalidCredentials -> "Invalid username or password."
         MissingAuthHeader -> "Missing 'Authorization' header in request."
+        RequestedUserNotAuth -> "User requested does not match user associated with provided auth token."
         SqlError sqlErr -> sqlErr
         CustomError msg -> msg
 

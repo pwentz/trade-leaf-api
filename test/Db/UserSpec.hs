@@ -8,21 +8,23 @@ import           Test.Hspec
 import           Test.QuickCheck
 
 import           Control.Monad.IO.Class
-
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
 import           Database.Persist.Sql        (get, toSqlKey)
 import           Servant
 
 import           Api.User                    (UserLocation (..),
-                                              UserRequest (..), createUser)
-import           Data.Time                   (getCurrentTime)
+                                              UserRequest (..), createUser,
+                                              getUser, updateCoords)
+import           Data.Time                   (UTCTime, getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
-defaultReq =
-    UserRequest "username" "password" "password" (UserLocation 0 0)
+defaultReq = UserRequest "username" "password" "password" (UserLocation 0 0)
+
+defaultUser :: UTCTime -> User
+defaultUser time = User "pat" "password" Nothing "0,0" time time
 
 spec :: Spec
 spec =
@@ -33,6 +35,16 @@ spec =
                 dbUser <-
                     runAppToIO config $ do
                         userId <- createUser defaultReq
-                        mbUser <- runDb $ get (toSqlKey userId :: Key User)
+                        mbUser <- getUser userId
                         return (userUsername <$> mbUser)
                 dbUser `shouldBe` (Just "username")
+            it "updates a user's location" $ \config -> do
+                time <- liftIO getCurrentTime
+                userCoords <-
+                    runAppToIO config $ do
+                        userId <- createUser defaultReq
+                        mbUser <- getUser userId
+                        traverse (updateCoords userId (UserLocation 12.34 56.789)) mbUser
+                        updatedUser <- getUser userId
+                        return (userCoordinates <$> updatedUser)
+                userCoords `shouldBe` (Just "12.34,56.789")
