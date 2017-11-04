@@ -20,6 +20,7 @@ import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
 import           Data.Int                    (Int64)
+import           Data.Maybe                  (fromMaybe)
 import           Data.Time                   (getCurrentTime)
 import qualified Database.Persist.Postgresql as Sql
 import           GHC.Generics                (Generic)
@@ -33,9 +34,8 @@ import           Servant
 data UserRequest = UserRequest
     { username             :: String
     , password             :: String
-    , confirmationPassword :: String
+    , passwordConfirmation :: String
     , location             :: UserLocation
-    , cloudinaryId         :: Maybe String
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
@@ -48,12 +48,22 @@ data UserLocation = UserLocation
 instance FromJSON UserLocation
 
 type UserAPI
-     = "users" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity User]
+    = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Sql.Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
      :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Sql.Entity Offer]
 
 userServer :: ServerT UserAPI App
-userServer = allUsersAuth :<|> createUser :<|> findMatches
+userServer = userInfo :<|> createUser :<|> findMatches
+
+userInfo :: Int64 -> User -> App (Sql.Entity User)
+userInfo userId user = do
+  mbUser <- runDb $ Sql.get (Sql.toSqlKey userId :: Sql.Key User)
+  if fromMaybe False (((== user)) <$> mbUser)
+     then
+      return (Sql.Entity (Sql.toSqlKey userId) user)
+     else
+      throwError $
+        apiErr (E401, CustomError "User requested does not match user associated with provided auth token.")
 
 allUsersAuth :: User -> App [Sql.Entity User]
 allUsersAuth user = do
@@ -78,7 +88,7 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         Sql.insert
-                            (User (username userReq) (BS.unpack pass) (cloudinaryId userReq) (fromLocation $ location userReq) time time)
+                            (User (username userReq) (BS.unpack pass) Nothing (fromLocation $ location userReq) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . Sql.fromSqlKey)
@@ -88,7 +98,7 @@ createUser userReq =
                               fromCoords (lat, lng)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest n p cp location cloudId) =
-    UserRequest <$> pure n <*>
-    (Auth.confirmPassword p cp *> Auth.validatePasswordLength p *> pure p) <*>
-      pure cp <*> pure location <*> pure cloudId
+validateUser (UserRequest u p pc location) =
+    UserRequest <$> pure u <*>
+    (Auth.confirmPassword p pc *> Auth.validatePasswordLength p *> pure p) <*>
+      pure pc <*> pure location
