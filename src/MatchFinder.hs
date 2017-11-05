@@ -7,7 +7,7 @@ module MatchFinder
 
 import           Config               (App)
 import           Control.Applicative  (liftA2)
-import           Data.Coords          (Coords, distanceInMiles, toCoords)
+import           Data.Coords          (distanceInMiles)
 import           Data.Maybe           (fromMaybe)
 import           Database.Esqueleto
 import qualified Database.Persist.Sql as Sql
@@ -72,11 +72,11 @@ findWithinRadius currentUser matchesByUser =
   where
     distanceBetweenUsers :: User -> User -> Double
     distanceBetweenUsers user1 user2 =
-        fromMaybe (1 / 0) $
+      fromMaybe (1/0) $
         liftA2
-            distanceInMiles
-            (toCoords $ userCoordinates user1)
-            (toCoords $ userCoordinates user2)
+          distanceInMiles
+          (userCoordinates user1)
+          (userCoordinates user2)
     foldMatches :: (Sql.Entity Offer, Sql.Entity User) -> App [Sql.Entity Offer] -> App [Sql.Entity Offer]
     foldMatches (offer, user) acc =
         let distance = distanceBetweenUsers currentUser (Sql.entityVal user)

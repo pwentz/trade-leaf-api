@@ -19,6 +19,7 @@ import           Control.Exception    (Exception, SomeException (..),
 import           Control.Monad.Catch  (catch)
 import           Control.Monad.Reader
 import           Data.Aeson           (FromJSON, ToJSON)
+import           Data.Coords          (Coords)
 import           Data.Time
 import           Database.Persist.Sql
 import           Database.Persist.TH  (mkMigrate, mkPersist, persistLowerCase,
@@ -33,7 +34,7 @@ share
         UniqueUsername username
         password String
         cloudinaryId String Maybe
-        coordinates String
+        coordinates Coords Maybe
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         deriving Show Eq

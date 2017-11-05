@@ -7,4 +7,4 @@ extra-deps:
 - esqueleto-2.5.3
 - gps-1.2
 - yaml-light-0.1.4
-resolver: lts-7.0
+resolver: lts-9.11

@@ -12,13 +12,14 @@ import qualified Api.Auth                    as Auth
 import           Api.Error                   (ApiErr (..), StatusCode (..),
                                               apiErr, sqlError)
 import           Config                      (App (..), Config (..), getConfig)
+import           Control.Applicative         (liftA2)
 import qualified Control.Monad.Except        as BE
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
-import           Data.Coords                 (Coords, fromCoords)
+import           Data.Coords                 (Coords, toCoords)
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
 import           Data.Time                   (getCurrentTime)
@@ -86,21 +87,18 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User (username userReq) (BS.unpack pass) Nothing (fromLocation $ location userReq) time time)
+                            (User (username userReq) (BS.unpack pass) Nothing (Just $ coordsFromLocation (location userReq)) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
                         newUser
-                          where
-                            fromLocation (UserLocation lat lng) =
-                              fromCoords (lat, lng)
 
 updateCoords :: Int64 -> UserLocation -> User -> App ()
-updateCoords userId (UserLocation lat lng) user = do
+updateCoords userId loc user = do
   requestedUser <- getUser userId
   if fromMaybe False ((== user) <$> requestedUser)
      then
-      runDb $ update (toSqlKey userId) [UserCoordinates =. (fromCoords (lat, lng))]
+      runDb $ update (toSqlKey userId) [UserCoordinates =. (Just $ coordsFromLocation loc)]
      else
       throwError $ apiErr (E401, RequestedUserNotAuth)
 
@@ -109,3 +107,6 @@ validateUser (UserRequest u p pc location) =
     UserRequest <$> pure u <*>
     (Auth.confirmPassword p pc *> Auth.validatePasswordLength p *> pure p) <*>
       pure pc <*> pure location
+
+coordsFromLocation :: UserLocation -> Coords
+coordsFromLocation = liftA2 toCoords lat lng
