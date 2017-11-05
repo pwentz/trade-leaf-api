@@ -13,6 +13,7 @@ import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
 import           Database.Persist.Sql        (get, toSqlKey)
 import           Servant
 
+import Data.Coords (toCoords)
 import           Api.User                    (UserLocation (..),
                                               UserRequest (..), createUser,
                                               getUser, updateCoords)
@@ -24,7 +25,7 @@ defaultReq :: UserRequest
 defaultReq = UserRequest "username" "password" "password" (UserLocation 0 0)
 
 defaultUser :: UTCTime -> User
-defaultUser time = User "pat" "password" Nothing "0,0" time time
+defaultUser time = User "pat" "password" Nothing Nothing time time
 
 spec :: Spec
 spec =
@@ -46,5 +47,5 @@ spec =
                         mbUser <- getUser userId
                         traverse (updateCoords userId (UserLocation 12.34 56.789)) mbUser
                         updatedUser <- getUser userId
-                        return (userCoordinates <$> updatedUser)
-                userCoords `shouldBe` (Just "12.34,56.789")
+                        return (userCoordinates =<< updatedUser)
+                userCoords `shouldBe` (Just $ toCoords 12.34 56.789)

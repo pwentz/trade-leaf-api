@@ -59,7 +59,6 @@ library
       , persistent-postgresql
       , persistent-template
       , servant
-      , servant-js
       , servant-server
       , transformers
       , wai

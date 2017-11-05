@@ -27,17 +27,21 @@ import           Api.Error                        (ApiErr (..), StatusCode (..),
                                                    apiErr)
 import           Config                           (App, Config, getConfig,
                                                    getJwtSecret, runApp)
+import           Control.Category                 ((<<<), (>>>))
 import           Control.Monad.IO.Class           (liftIO)
 import           Control.Monad.Reader             (runReaderT)
 import           Data.Text.Encoding               (decodeUtf8)
-import           Database.Persist.Postgresql      (Entity, entityVal,
-                                                   selectFirst, (==.), fromSqlKey, entityKey)
+import           Database.Persist.Postgresql      (Entity, entityKey, entityVal,
+                                                   fromSqlKey, selectFirst,
+                                                   (==.))
 import           Network.Wai                      (Request, requestHeaders)
-import           Servant                          ((:<|>), (:>), (:~>) (Nat),
-                                                   AuthProtect, Handler, JSON,
+import           Servant                          ((:<|>), (:>), (:~>) (NT),
+                                                   AuthProtect, Handler,
+                                                   Handler (Handler), JSON,
                                                    Post, ReqBody, ServantErr,
                                                    ServerT, enter, err400,
-                                                   err401, err404, throwError)
+                                                   err401, err404,
+                                                   runReaderTNat, throwError)
 import           Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
                                                    mkAuthHandler)
 import           Web.JWT                          (Algorithm (HS256), JWT,
@@ -48,7 +52,7 @@ import           Web.JWT                          (Algorithm (HS256), JWT,
 
 data UserAuth = UserAuth
     { authUserId :: Int64
-    , token    :: Maybe T.Text
+    , token      :: Maybe T.Text
     } deriving (Show, Generic)
 
 instance FromJSON UserAuth
@@ -100,10 +104,10 @@ getKeyFromToken cs =
 lookUpUser :: String -> Servant.Handler User
 lookUpUser key = do
     cfg <- liftIO getConfig
-    enter (convertAppx cfg) (userFromDb key)
+    enter (convertAppx cfg >>> NT Handler) (userFromDb key)
 
-convertAppx :: Config -> App :~> BE.ExceptT ServantErr IO
-convertAppx cfg = Nat (flip runReaderT cfg . runApp)
+convertAppx :: Config  -> App :~> BE.ExceptT ServantErr IO
+convertAppx cfg = runReaderTNat cfg <<< NT runApp
 
 userFromDb :: String -> App User
 userFromDb str =

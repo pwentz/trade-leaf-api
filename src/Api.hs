@@ -10,6 +10,7 @@ import           Api.Auth                         (AuthAPI, authHandler,
                                                    authServer)
 import           Api.User
 import           Config                           (App (..), Config (..))
+import           Control.Category                 ((<<<), (>>>))
 import           Control.Monad.Except
 import           Control.Monad.Reader             (ReaderT, runReaderT)
 import           Control.Monad.Reader.Class
@@ -24,13 +25,13 @@ import           Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
                                                    mkAuthHandler)
 
 appToServer :: Config -> Server UserAPI
-appToServer cfg = enter (convertApp cfg) userServer
+appToServer cfg = enter (convertApp cfg >>> NT Handler) userServer
 
 appToAuthServer :: Config -> Server AuthAPI
-appToAuthServer cfg = enter (convertApp cfg) authServer
+appToAuthServer cfg = enter (convertApp cfg >>> NT Handler) authServer
 
 convertApp :: Config -> App :~> ExceptT ServantErr IO
-convertApp cfg = Nat (flip runReaderT cfg . runApp)
+convertApp cfg = runReaderTNat cfg <<< NT runApp
 
 type AppAPI = UserAPI :<|> AuthAPI
 

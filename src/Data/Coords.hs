@@ -2,56 +2,58 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Data.Coords
-    ( toCoords
-    , distanceInMiles
-    , fromCoords
+    ( distanceInMiles
+    , toCoords
     , Coords
-    , Geo
+    , getCoords
     ) where
 
 import           Control.Applicative   (liftA2)
+import           Data.Aeson            (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8 as BS
 import           Data.String.Utils     (split)
 import qualified Database.Persist.Sql  as Sql
-import           Geo.Computations      (Point, distance, pt)
+import           Debug.Trace           (trace)
+import           Geo.Computations      (distance, pt)
+import           GHC.Generics          (Generic)
 import           Text.Read             (readMaybe)
-import GHC.Generics (Generic)
 
-data Geo =
-    Geo BS.ByteString
-    deriving (Eq, Show, Generic)
+type Point = (Double, Double)
 
-instance Sql.PersistField Geo where
-    toPersistValue (Geo t) = Sql.PersistDbSpecific t
+data Coords = Coords
+    { getCoords :: Point
+    } deriving (Eq, Show, Generic)
+
+instance ToJSON Coords
+instance FromJSON Coords
+
+instance Sql.PersistField Coords where
+    toPersistValue (Coords t) = Sql.PersistDbSpecific (BS.pack $ fromPoint t)
     fromPersistValue (Sql.PersistDbSpecific t) =
-        Right $ Geo $ BS.concat ["'", t, "'"]
+        Right $ Coords (toPoint $ BS.unpack t)
     fromPersistValue _ =
-        Left "Geo values must be converted from PersistDbSpecific"
+        Left "Coords must be converted from PersistDbSpecific"
 
-instance Sql.PersistFieldSql Geo where
-    sqlType _ = Sql.SqlOther "GEOGRAPHY(POINT,4326)"
+instance Sql.PersistFieldSql Coords where
+    sqlType _ = Sql.SqlOther "POINT"
 
-toPoint :: Double -> Double -> Geo
-toPoint lat lon = Geo $ BS.concat ["'POINT(", ps $ lon, " ", ps $ lat, ")'"]
-  where
-    ps = BS.pack . show
-
-type Coords = (Double, Double)
-
-toCoords :: String -> Maybe Coords
-toCoords str
-    | length splitCoords == 2 =
-        toCoords' (head splitCoords) (head $ tail splitCoords)
-    | otherwise = Nothing
-  where
-    splitCoords = split "," str
-    toCoords' lat lng = liftA2 (,) (readMaybe lat) (readMaybe lng)
+toCoords :: Double -> Double -> Coords
+toCoords = curry Coords
 
 distanceInMiles :: Coords -> Coords -> Double
-distanceInMiles start end = toMiles $ distance (mkPnt start) (mkPnt end)
+distanceInMiles (Coords start) (Coords end) =
+    toMiles $ distance (mkPnt start) (mkPnt end)
   where
     mkPnt (lat, lng) = pt lat lng Nothing Nothing
     toMiles = (/ 1609.34)
 
-fromCoords :: Coords -> String
-fromCoords (lat, lng) = concat [show lat, ",", show lng]
+toPoint :: String -> Point
+toPoint coords =
+    let (lat:(lng:_)) = splitCoords $ dropParens coords
+    in (lat, lng)
+  where
+    dropParens = drop 1 . init
+    splitCoords = fmap read . split ","
+
+fromPoint :: Point -> String
+fromPoint (lat, lng) = concat [show lat, ",", show lng]
