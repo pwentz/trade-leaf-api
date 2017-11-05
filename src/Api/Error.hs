@@ -116,7 +116,7 @@ parseSqlError strErr =
 
 getDetailFieldFromSqlError :: String -> Maybe String
 getDetailFieldFromSqlError =
-    let dropHeaders = reverse . drop 1 . reverse . dropWhile (/= '(')
+    let dropHeaders =  init . dropWhile (/= '(')
     in (dropHeaders <$>) .
        (sHead . filter (isInfixOf "sqlErrorDetail") . split ",")
 

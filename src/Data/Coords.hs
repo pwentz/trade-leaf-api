@@ -5,7 +5,6 @@ module Data.Coords
     ( distanceInMiles
     , toCoords
     , Coords
-    , getCoords
     ) where
 
 import           Control.Applicative   (liftA2)
@@ -20,19 +19,19 @@ import           Text.Read             (readMaybe)
 
 type Point = (Double, Double)
 
-data Coords = Coords
-    { getCoords :: Point
-    } deriving (Eq, Show, Generic)
+data Coords =
+    Coords Point
+    deriving (Eq, Show, Generic)
 
 instance ToJSON Coords
+
 instance FromJSON Coords
 
 instance Sql.PersistField Coords where
     toPersistValue (Coords t) = Sql.PersistDbSpecific (BS.pack $ fromPoint t)
     fromPersistValue (Sql.PersistDbSpecific t) =
         Right $ Coords (toPoint $ BS.unpack t)
-    fromPersistValue _ =
-        Left "Coords must be converted from PersistDbSpecific"
+    fromPersistValue _ = Left "Coords must be converted from PersistDbSpecific"
 
 instance Sql.PersistFieldSql Coords where
     sqlType _ = Sql.SqlOther "POINT"
