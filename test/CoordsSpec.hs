@@ -7,13 +7,6 @@ import Test.QuickCheck
 spec :: Spec
 spec = do
     describe "CoordsSpec" $ do
-        it "can convert two doubles into coords" $ do
-            getCoords (toCoords 12.345 (-343.34)) `shouldBe` (12.345,(-343.34))
-        -- it "can convert a string into coordinates" $ do
-        --     (toCoords "-41.4533,12.3432") `shouldBe`
-        --         (Just ((-41.4533), 12.3432))
-        --     (toCoords "-41.4533") `shouldBe` Nothing
-        --     (toCoords "-41.4533,12.3432,14.3424") `shouldBe` Nothing
         it "can calculate the distance between two coordinates (in miles)" $
             let start = toCoords 41.938132 (-87.642753)
             in do

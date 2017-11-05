@@ -22,7 +22,7 @@ import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
-defaultReq = UserRequest "username" "password" "password" (UserLocation 0 0)
+defaultReq = UserRequest "username" "password" "password" Nothing
 
 defaultUser :: UTCTime -> User
 defaultUser time = User "pat" "password" Nothing Nothing time time

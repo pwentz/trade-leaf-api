@@ -36,7 +36,7 @@ data UserRequest = UserRequest
     { username             :: String
     , password             :: String
     , passwordConfirmation :: String
-    , location             :: UserLocation
+    , location             :: Maybe UserLocation
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
@@ -52,7 +52,7 @@ type UserAPI
     = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
      :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Entity Offer]
-     :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Post '[JSON] ()
+     :<|> "users" :> Capture "id" Int64 :> "coordinates" :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Post '[JSON] ()
 
 userServer :: ServerT UserAPI App
 userServer = userInfo :<|> createUser :<|> findMatches :<|> updateCoords
@@ -87,7 +87,7 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User (username userReq) (BS.unpack pass) Nothing (Just $ coordsFromLocation (location userReq)) time time)
+                            (User (username userReq) (BS.unpack pass) Nothing (coordsFromLocation <$> (location userReq)) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
