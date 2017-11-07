@@ -29,11 +29,17 @@ import           GHC.Generics         (Generic)
 share
     [mkPersist sqlSettings, mkMigrate "migrateAll"]
     [persistLowerCase|
+    Photo json
+        cloudinaryId String Maybe
+        imageUrl String
+        createdAt UTCTime default=CURRENT_TIMESTAMP
+        updatedAt UTCTime default=CURRENT_TIMESTAMP
+        deriving Show
     User json
         username String
         UniqueUsername username
         password String
-        cloudinaryId String Maybe
+        photoId PhotoId
         coordinates Coords Maybe
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
@@ -47,7 +53,7 @@ share
     Offer json
         userId UserId
         categoryId CategoryId
-        cloudinaryId String Maybe
+        photoId PhotoId
         description String
         radius Double default='Infinity'
         createdAt UTCTime default=CURRENT_TIMESTAMP

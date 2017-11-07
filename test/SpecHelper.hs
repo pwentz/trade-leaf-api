@@ -34,3 +34,4 @@ setupTeardown runTestsWith = do
         runSqlPool (deleteWhere ([] :: [Filter Offer])) pool
         runSqlPool (deleteWhere ([] :: [Filter Category])) pool
         runSqlPool (deleteWhere ([] :: [Filter User])) pool
+        runSqlPool (deleteWhere ([] :: [Filter Photo])) pool

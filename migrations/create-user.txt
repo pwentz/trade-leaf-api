@@ -1,12 +1,12 @@
 Description: Creates user table.
 Created: 2017-10-25 23:54:05.54656 UTC
-Depends:
+Depends: create-photo
 Apply: |
   CREATE TABLE "user" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
     "username" VARCHAR(20) UNIQUE NOT NULL,
     "password" VARCHAR NOT NULL,
-    "cloudinary_id" VARCHAR NULL,
+    "photo_id" SERIAL8 REFERENCES "photo",
     "coordinates" POINT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

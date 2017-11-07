@@ -6,7 +6,7 @@ Apply: |
     "id" SERIAL8 PRIMARY KEY UNIQUE,
     "user_id" SERIAL8 REFERENCES "user",
     "category_id" SERIAL8 REFERENCES "category",
-    "cloudinary_id" VARCHAR NULL,
+    "photo_id" SERIAL8 REFERENCES "photo",
     "description" VARCHAR(80) NOT NULL,
     "radius" FLOAT NULL DEFAULT 'Infinity',
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

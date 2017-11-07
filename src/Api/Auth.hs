@@ -52,7 +52,7 @@ import           Web.JWT                          (Algorithm (HS256), JWT,
 
 data UserAuth = UserAuth
     { authUserId :: Int64
-    , token      :: Maybe T.Text
+    , authToken  :: Maybe T.Text
     } deriving (Show, Generic)
 
 instance FromJSON UserAuth
@@ -127,7 +127,7 @@ authUser authEntry = do
             | doPasswordsMatch authEntry person ->
                 return $
                 UserAuth
-                {authUserId = (fromSqlKey (entityKey person)), token = Just (tokenFromSecret jwtSecret)}
+                {authUserId = (fromSqlKey (entityKey person)), authToken = Just (tokenFromSecret jwtSecret)}
             | otherwise -> throwError $ apiErr (E400, InvalidCredentials)
   where
     uName = authUsername authEntry
