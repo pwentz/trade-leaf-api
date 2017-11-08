@@ -45,6 +45,7 @@ library
       , Api.User
       , Api.Auth
       , Api.Error
+      , Api.Photo
       , Utils
       , Data.Coords
       , MatchFinder
@@ -90,7 +91,8 @@ test-suite trade-leaf-api-test
     other-modules:
         SpecHelper
       , Api.ErrorSpec
-      , Db.UserSpec
+      , Api.PhotoSpec
+      , Api.UserSpec
       , Db.MatchFinderSpec
       , UtilsSpec
       , CoordsSpec

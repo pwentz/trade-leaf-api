@@ -26,9 +26,8 @@ import           Data.Time                   (getCurrentTime)
 import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
-import           MatchFinder                 (findMatches)
 import           Models                      (EntityField (UserCoordinates),
-                                              Offer (Offer), User (User), Photo (Photo), runDb,
+                                              Offer (Offer), User (User), runDb,
                                               runSafeDb, userUsername)
 import           Servant
 
@@ -49,22 +48,13 @@ data UserLocation = UserLocation
 
 instance FromJSON UserLocation
 
-data PhotoRequest = PhotoRequest
-    { cloudinaryId :: Maybe String
-    , imageUrl :: String
-    } deriving (Show, Generic)
-
-instance FromJSON PhotoRequest
-
 type UserAPI
     = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
-     :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Entity Offer]
      :<|> "users" :> Capture "id" Int64 :> "coordinates" :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Put '[JSON] ()
-     :<|> "photos" :> ReqBody '[JSON] PhotoRequest :> Post '[JSON] Int64
 
 userServer :: ServerT UserAPI App
-userServer = userInfo :<|> createUser :<|> findMatches :<|> updateCoords :<|> createPhoto
+userServer = userInfo :<|> createUser :<|> updateCoords
 
 getUser :: Int64 -> App (Maybe User)
 getUser = runDb . get . toSqlKey
@@ -79,12 +69,12 @@ userInfo userId user = do
       throwError $ apiErr (E401, RequestedUserNotAuth)
 
 createUser :: UserRequest -> App Int64
-createUser userReq =
+createUser userReq@(UserRequest uname upass upassCon loc photoKey) =
     case validateUser userReq of
         Left e -> throwError $ apiErr (E400, e)
         Right usr -> do
             time <- liftIO getCurrentTime
-            pw <- liftIO (Auth.encodePassword (password userReq))
+            pw <- liftIO (Auth.encodePassword upass)
             case pw of
                 Nothing ->
                     throwError $
@@ -96,19 +86,11 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User (username userReq) (BS.unpack pass) (toSqlKey <$> photoId userReq) (coordsFromLocation <$> (location userReq)) time time)
+                            (User uname (BS.unpack pass) (toSqlKey <$> photoKey) (coordsFromLocation <$> loc) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
                         newUser
-
-createPhoto :: PhotoRequest -> App Int64
-createPhoto (PhotoRequest cloudId image) = do
-  time <- liftIO getCurrentTime
-  (runSafeDb $ insert (Photo cloudId image time time)) >>=
-    either
-      (throwError . apiErr . ((,) E401) . sqlError)
-      (return . fromSqlKey)
 
 updateCoords :: Int64 -> UserLocation -> User -> App ()
 updateCoords userId loc user = do

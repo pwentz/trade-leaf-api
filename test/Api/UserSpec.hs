@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Db.UserSpec where
+module Api.UserSpec where
 
 import           Test.Hspec
 import           Test.QuickCheck
@@ -13,9 +13,8 @@ import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
 import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey)
 import           Servant
 
-import           Api.User                    (PhotoRequest (..),
-                                              UserLocation (..),
-                                              UserRequest (..), createPhoto,
+import           Api.User                    (UserLocation (..),
+                                              UserRequest (..),
                                               createUser, getUser, updateCoords)
 import           Data.Coords                 (toCoords)
 import           Data.Time                   (UTCTime, getCurrentTime)
@@ -47,11 +46,3 @@ spec =
                         updatedUser <- getUser userId
                         return (userCoordinates =<< updatedUser)
                 userCoords `shouldBe` (Just $ toCoords 12.34 56.789)
-            it "create a photo" $ \config -> do
-                time <- liftIO getCurrentTime
-                photoUrl <-
-                  runAppToIO config $ do
-                    photoId <- createPhoto (PhotoRequest Nothing "https://google.com/images/clown")
-                    mbPhoto <- runDb $ get (toSqlKey photoId)
-                    return (photoImageUrl <$> mbPhoto)
-                photoUrl `shouldBe` (Just "https://google.com/images/clown")
