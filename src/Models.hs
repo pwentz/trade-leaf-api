@@ -39,7 +39,7 @@ share
         username String
         UniqueUsername username
         password String
-        photoId PhotoId
+        photoId PhotoId Maybe
         coordinates Coords Maybe
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP

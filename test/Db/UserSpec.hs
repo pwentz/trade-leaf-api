@@ -22,8 +22,8 @@ import           Data.Time                   (UTCTime, getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
-defaultReq :: Key Photo -> UserRequest
-defaultReq photoId = UserRequest "username" "password" "password" Nothing (fromSqlKey photoId)
+defaultReq :: UserRequest
+defaultReq = UserRequest "username" "password" "password" Nothing Nothing
 
 spec :: Spec
 spec =
@@ -33,8 +33,7 @@ spec =
                 time <- liftIO getCurrentTime
                 dbUser <-
                     runAppToIO config $ do
-                        photoId <- runDb $ insert (Photo Nothing "" time time)
-                        userId <- createUser (defaultReq photoId)
+                        userId <- createUser defaultReq
                         mbUser <- getUser userId
                         return (userUsername <$> mbUser)
                 dbUser `shouldBe` (Just "username")
@@ -42,8 +41,7 @@ spec =
                 time <- liftIO getCurrentTime
                 userCoords <-
                     runAppToIO config $ do
-                        photoId <- runDb $ insert (Photo Nothing "" time time)
-                        userId <- createUser (defaultReq photoId)
+                        userId <- createUser defaultReq
                         mbUser <- getUser userId
                         traverse (updateCoords userId (UserLocation 12.34 56.789)) mbUser
                         updatedUser <- getUser userId

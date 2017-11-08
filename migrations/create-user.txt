@@ -6,7 +6,7 @@ Apply: |
     "id" SERIAL8 PRIMARY KEY UNIQUE,
     "username" VARCHAR(20) UNIQUE NOT NULL,
     "password" VARCHAR NOT NULL,
-    "photo_id" SERIAL8 REFERENCES "photo",
+    "photo_id" INT8 REFERENCES "photo",
     "coordinates" POINT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

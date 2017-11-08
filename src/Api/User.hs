@@ -37,7 +37,7 @@ data UserRequest = UserRequest
     , password             :: String
     , passwordConfirmation :: String
     , location             :: Maybe UserLocation
-    , photoId              :: Int64
+    , photoId              :: Maybe Int64
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
@@ -96,7 +96,7 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User (username userReq) (BS.unpack pass) (toSqlKey $ photoId userReq) (coordsFromLocation <$> (location userReq)) time time)
+                            (User (username userReq) (BS.unpack pass) (toSqlKey <$> photoId userReq) (coordsFromLocation <$> (location userReq)) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
