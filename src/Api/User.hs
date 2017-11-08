@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Api.User where
 
@@ -26,7 +27,7 @@ import           Data.Time                   (getCurrentTime)
 import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
-import           Models                      (EntityField (UserCoordinates),
+import           Models                      (EntityField (UserCoordinates, UserPhotoId, UserUsername),
                                               Offer (Offer), User (User), runDb,
                                               runSafeDb, userUsername)
 import           Servant
@@ -48,13 +49,21 @@ data UserLocation = UserLocation
 
 instance FromJSON UserLocation
 
+data UserPatchRequest = UserPatchRequest
+  { patchUsername    :: Maybe String
+  , patchPhotoId     :: Maybe Int64
+  , patchCoordinates :: Maybe UserLocation
+  } deriving (Show, Generic)
+
+instance FromJSON UserPatchRequest
+
 type UserAPI
     = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
-     :<|> "users" :> Capture "id" Int64 :> "coordinates" :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Put '[JSON] ()
+     :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserPatchRequest :> AuthProtect "jwt-auth" :> Patch '[JSON] ()
 
 userServer :: ServerT UserAPI App
-userServer = userInfo :<|> createUser :<|> updateCoords
+userServer = userInfo :<|> createUser :<|> patchUser
 
 getUser :: Int64 -> App (Maybe User)
 getUser = runDb . get . toSqlKey
@@ -69,12 +78,12 @@ userInfo userId user = do
       throwError $ apiErr (E401, RequestedUserNotAuth)
 
 createUser :: UserRequest -> App Int64
-createUser userReq@(UserRequest uname upass upassCon loc photoKey) =
+createUser userReq@UserRequest{..} =
     case validateUser userReq of
         Left e -> throwError $ apiErr (E400, e)
         Right usr -> do
             time <- liftIO getCurrentTime
-            pw <- liftIO (Auth.encodePassword upass)
+            pw <- liftIO (Auth.encodePassword password)
             case pw of
                 Nothing ->
                     throwError $
@@ -86,20 +95,30 @@ createUser userReq@(UserRequest uname upass upassCon loc photoKey) =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User uname (BS.unpack pass) (toSqlKey <$> photoKey) (coordsFromLocation <$> loc) time time)
+                            (User username (BS.unpack pass) (toSqlKey <$> photoId) (coordsFromLocation <$> location) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
                         newUser
 
-updateCoords :: Int64 -> UserLocation -> User -> App ()
-updateCoords userId loc user = do
+patchUser :: Int64 -> UserPatchRequest -> User -> App ()
+patchUser userId UserPatchRequest{..} user = do
   requestedUser <- getUser userId
   if fromMaybe False ((== user) <$> requestedUser)
-     then
-      runDb $ update (toSqlKey userId) [UserCoordinates =. (Just $ coordsFromLocation loc)]
-     else
-      throwError $ apiErr (E401, RequestedUserNotAuth)
+      then do
+        traverse updateUsername patchUsername
+        traverse updatePhotoId patchPhotoId
+        traverse updateCoords patchCoordinates
+        return ()
+      else
+        throwError $ apiErr (E401, RequestedUserNotAuth)
+  where
+      updateUsername username =
+        runDb $ update ((toSqlKey userId) :: Key User) [UserUsername =. username]
+      updatePhotoId pId =
+        runDb $ update ((toSqlKey userId) :: Key User) [UserPhotoId =. (Just (toSqlKey pId))]
+      updateCoords userLoc =
+        runDb $ update ((toSqlKey userId) :: Key User) [UserCoordinates =. (Just $ coordsFromLocation userLoc)]
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser (UserRequest u p pc location photoId) =
