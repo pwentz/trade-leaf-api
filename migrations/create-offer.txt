@@ -4,9 +4,9 @@ Depends: create-category create-user
 Apply: |
   CREATE TABLE "offer" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
-    "user_id" SERIAL8 REFERENCES "user",
-    "category_id" SERIAL8 REFERENCES "category",
-    "cloudinary_id" VARCHAR NULL,
+    "user_id" INT8 REFERENCES "user" NOT NULL,
+    "category_id" INT8 REFERENCES "category" NOT NULL,
+    "photo_id" INT8 REFERENCES "photo" NOT NULL,
     "description" VARCHAR(80) NOT NULL,
     "radius" FLOAT NULL DEFAULT 'Infinity',
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

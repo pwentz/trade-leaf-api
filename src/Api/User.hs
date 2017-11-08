@@ -26,7 +26,6 @@ import           Data.Time                   (getCurrentTime)
 import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
-import           MatchFinder                 (findMatches)
 import           Models                      (EntityField (UserCoordinates),
                                               Offer (Offer), User (User), runDb,
                                               runSafeDb, userUsername)
@@ -37,25 +36,25 @@ data UserRequest = UserRequest
     , password             :: String
     , passwordConfirmation :: String
     , location             :: Maybe UserLocation
+    , photoId              :: Maybe Int64
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
 
 data UserLocation = UserLocation
-  { lat :: Double
-  , lng :: Double
-  } deriving (Show, Generic)
+    { lat :: Double
+    , lng :: Double
+    } deriving (Show, Generic)
 
 instance FromJSON UserLocation
 
 type UserAPI
     = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
-     :<|> "offers" :> AuthProtect "jwt-auth" :> Get '[JSON] [Entity Offer]
-     :<|> "users" :> Capture "id" Int64 :> "coordinates" :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Post '[JSON] ()
+     :<|> "users" :> Capture "id" Int64 :> "coordinates" :> ReqBody '[JSON] UserLocation :> AuthProtect "jwt-auth" :> Put '[JSON] ()
 
 userServer :: ServerT UserAPI App
-userServer = userInfo :<|> createUser :<|> findMatches :<|> updateCoords
+userServer = userInfo :<|> createUser :<|> updateCoords
 
 getUser :: Int64 -> App (Maybe User)
 getUser = runDb . get . toSqlKey
@@ -70,12 +69,12 @@ userInfo userId user = do
       throwError $ apiErr (E401, RequestedUserNotAuth)
 
 createUser :: UserRequest -> App Int64
-createUser userReq =
+createUser userReq@(UserRequest uname upass upassCon loc photoKey) =
     case validateUser userReq of
         Left e -> throwError $ apiErr (E400, e)
         Right usr -> do
             time <- liftIO getCurrentTime
-            pw <- liftIO (Auth.encodePassword (password userReq))
+            pw <- liftIO (Auth.encodePassword upass)
             case pw of
                 Nothing ->
                     throwError $
@@ -87,7 +86,7 @@ createUser userReq =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User (username userReq) (BS.unpack pass) Nothing (coordsFromLocation <$> (location userReq)) time time)
+                            (User uname (BS.unpack pass) (toSqlKey <$> photoKey) (coordsFromLocation <$> loc) time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
@@ -103,10 +102,10 @@ updateCoords userId loc user = do
       throwError $ apiErr (E401, RequestedUserNotAuth)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest u p pc location) =
+validateUser (UserRequest u p pc location photoId) =
     UserRequest <$> pure u <*>
     (Auth.confirmPassword p pc *> Auth.validatePasswordLength p *> pure p) <*>
-      pure pc <*> pure location
+      pure pc <*> pure location <*> pure photoId
 
 coordsFromLocation :: UserLocation -> Coords
 coordsFromLocation = liftA2 toCoords lat lng

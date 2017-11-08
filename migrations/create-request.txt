@@ -4,8 +4,8 @@ Depends: create-offer create-category create-user
 Apply: |
   CREATE TABLE "request" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
-    "offer_id" SERIAL8 REFERENCES "offer" UNIQUE,
-    "category_id" SERIAL8 REFERENCES "category",
+    "offer_id" INT8 REFERENCES "offer" UNIQUE NOT NULL,
+    "category_id" INT8 REFERENCES "category" NOT NULL,
     "description" VARCHAR(80) NOT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP

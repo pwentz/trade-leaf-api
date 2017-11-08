@@ -1,0 +1,13 @@
+Description: Creates Photo table.
+Created: 2017-11-07 00:30:30.889548 UTC
+Depends:
+Apply: |
+  CREATE TABLE "photo" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "cloudinary_id" VARCHAR NULL,
+    "image_url" VARCHAR NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "photo";

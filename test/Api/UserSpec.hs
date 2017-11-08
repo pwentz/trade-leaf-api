@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Db.UserSpec where
+module Api.UserSpec where
 
 import           Test.Hspec
 import           Test.QuickCheck
@@ -10,22 +10,19 @@ import           Test.QuickCheck
 import           Control.Monad.IO.Class
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
-import           Database.Persist.Sql        (get, toSqlKey)
+import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey)
 import           Servant
 
-import Data.Coords (toCoords)
 import           Api.User                    (UserLocation (..),
-                                              UserRequest (..), createUser,
-                                              getUser, updateCoords)
+                                              UserRequest (..),
+                                              createUser, getUser, updateCoords)
+import           Data.Coords                 (toCoords)
 import           Data.Time                   (UTCTime, getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
-defaultReq = UserRequest "username" "password" "password" Nothing
-
-defaultUser :: UTCTime -> User
-defaultUser time = User "pat" "password" Nothing Nothing time time
+defaultReq = UserRequest "username" "password" "password" Nothing Nothing
 
 spec :: Spec
 spec =
