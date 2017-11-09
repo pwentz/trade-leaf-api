@@ -1,11 +1,12 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Api.User where
 
@@ -21,7 +22,7 @@ import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Char8       as BS
 import           Data.ByteString.Lazy.Char8  as LBS
-import           Data.Coords                 (Coords, toCoords)
+import           Data.Coords                 (Coords (Coords))
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
 import           Data.Time                   (getCurrentTime)
@@ -38,32 +39,25 @@ data UserRequest = UserRequest
     { username             :: String
     , password             :: String
     , passwordConfirmation :: String
-    , location             :: Maybe UserLocation
+    , coordinates          :: Maybe Coords
     , photoId              :: Maybe Int64
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
 
-data UserLocation = UserLocation
-    { lat :: Double
-    , lng :: Double
-    } deriving (Show, Generic)
-
-instance FromJSON UserLocation
-
 data UserPatchRequest = UserPatchRequest
-  { patchUsername    :: Maybe String
-  , patchPhotoId     :: Maybe Int64
-  , patchCoordinates :: Maybe UserLocation
+  { username    :: Maybe String
+  , photoId     :: Maybe Int64
+  , coordinates :: Maybe Coords
   } deriving (Show, Generic)
 
 instance FromJSON UserPatchRequest
 
 data UserMeta = UserMeta
-  { metaId       :: Int64
-  , metaUsername :: String
-  , metaPhoto    :: Maybe Photo
-  , metaCoords   :: Maybe Coords
+  { id          :: Int64
+  , username    :: String
+  , photo       :: Maybe Photo
+  , coordinates :: Maybe Coords
   } deriving (Show, Generic)
 
 instance ToJSON UserMeta
@@ -97,7 +91,7 @@ createUser userReq@UserRequest{..} =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User username (BS.unpack pass) (toSqlKey <$> photoId) (coordsFromLocation <$> location) time time)
+                            (User username (BS.unpack pass) (toSqlKey <$> photoId) coordinates time time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
@@ -108,19 +102,19 @@ patchUser userId UserPatchRequest{..} user = do
   requestedUser <- getUser userId
   if fromMaybe False ((== user) <$> requestedUser)
       then do
-        traverse updateUsername patchUsername
-        traverse updatePhotoId patchPhotoId
-        traverse updateCoords patchCoordinates
+        traverse updateUsername username
+        traverse updatePhotoId photoId
+        traverse updateCoords coordinates
         return ()
       else
         throwError $ apiErr (E401, RequestedUserNotAuth)
   where
-      updateUsername username =
-        runDb $ update ((toSqlKey userId) :: Key User) [UserUsername =. username]
+      updateUsername name =
+        runDb $ update ((toSqlKey userId) :: Key User) [UserUsername =. name]
       updatePhotoId pId =
         runDb $ update ((toSqlKey userId) :: Key User) [UserPhotoId =. (Just (toSqlKey pId))]
-      updateCoords userLoc =
-        runDb $ update ((toSqlKey userId) :: Key User) [UserCoordinates =. (Just $ coordsFromLocation userLoc)]
+      updateCoords coords =
+        runDb $ update ((toSqlKey userId) :: Key User) [UserCoordinates =. (Just coords)]
 
 getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
@@ -137,6 +131,3 @@ validateUser (UserRequest u p pc location photoId) =
     UserRequest <$> pure u <*>
     (Auth.confirmPassword p pc *> Auth.validatePasswordLength p *> pure p) <*>
       pure pc <*> pure location <*> pure photoId
-
-coordsFromLocation :: UserLocation -> Coords
-coordsFromLocation = liftA2 toCoords lat lng

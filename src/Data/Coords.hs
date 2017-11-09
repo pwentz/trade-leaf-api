@@ -3,8 +3,7 @@
 
 module Data.Coords
     ( distanceInMiles
-    , toCoords
-    , Coords
+    , Coords(Coords)
     ) where
 
 import           Control.Applicative   (liftA2)
@@ -17,10 +16,11 @@ import           Geo.Computations      (distance, pt)
 import           GHC.Generics          (Generic)
 import           Text.Read             (readMaybe)
 
-type Point = (Double, Double)
-
 data Coords =
-    Coords Point
+    Coords
+      { lat :: Double
+      , lng :: Double
+      }
     deriving (Eq, Show, Generic)
 
 instance ToJSON Coords
@@ -28,31 +28,28 @@ instance ToJSON Coords
 instance FromJSON Coords
 
 instance Sql.PersistField Coords where
-    toPersistValue (Coords t) = Sql.PersistDbSpecific (BS.pack $ fromPoint t)
+    toPersistValue coords = Sql.PersistDbSpecific (BS.pack $ fromCoords coords)
     fromPersistValue (Sql.PersistDbSpecific t) =
-        Right $ Coords (toPoint $ BS.unpack t)
+        Right $ (toCoords $ BS.unpack t)
     fromPersistValue _ = Left "Coords must be converted from PersistDbSpecific"
 
 instance Sql.PersistFieldSql Coords where
     sqlType _ = Sql.SqlOther "POINT"
 
-toCoords :: Double -> Double -> Coords
-toCoords = curry Coords
-
 distanceInMiles :: Coords -> Coords -> Double
-distanceInMiles (Coords start) (Coords end) =
-    toMiles $ distance (mkPnt start) (mkPnt end)
+distanceInMiles (Coords startLat startLng) (Coords endLat endLng) =
+    toMiles $ distance (mkPnt startLat startLng) (mkPnt endLat endLng)
   where
-    mkPnt (lat, lng) = pt lat lng Nothing Nothing
+    mkPnt x y = pt x y Nothing Nothing
     toMiles = (/ 1609.34)
 
-toPoint :: String -> Point
-toPoint coords =
+toCoords :: String -> Coords
+toCoords coords =
     let (lat:(lng:_)) = splitCoords $ dropParens coords
-    in (lat, lng)
+    in Coords lat lng
   where
     dropParens = drop 1 . init
     splitCoords = fmap read . split ","
 
-fromPoint :: Point -> String
-fromPoint (lat, lng) = concat [show lat, ",", show lng]
+fromCoords :: Coords -> String
+fromCoords (Coords lat lng) = concat [show lat, ",", show lng]

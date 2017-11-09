@@ -16,11 +16,11 @@ import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey)
 import           Servant
 
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
-import           Api.User                    (UserLocation (..),
-                                              UserPatchRequest (..),
-                                              UserRequest (..), createUser,
-                                              getUser, patchUser, getUserMeta, metaUsername, metaPhoto, metaCoords)
-import           Data.Coords                 (toCoords)
+import           Api.User                    (UserPatchRequest (UserPatchRequest),
+                                              UserRequest (UserRequest),
+                                              UserMeta(..), createUser,
+                                              getUser, patchUser, getUserMeta)
+import           Data.Coords                 (Coords(Coords))
 import           Data.Time                   (UTCTime, getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
@@ -30,7 +30,7 @@ defaultReq = UserRequest "username" "password" "password" Nothing Nothing
 
 reqWithData :: Int64 -> UserRequest
 reqWithData photoId =
-  UserRequest "pat" "password" "password" (Just (UserLocation 12.345 54.321)) (Just photoId)
+  UserRequest "pat" "password" "password" (Just (Coords 12.345 54.321)) (Just photoId)
 
 photoReq :: PhotoRequest
 photoReq = PhotoRequest Nothing "https://google.com/clown.png"
@@ -52,11 +52,11 @@ spec =
                         userId <- createUser defaultReq
                         photoId <- createPhoto photoReq
                         mbUser <- getUser userId
-                        traverse (patchUser userId (UserPatchRequest Nothing (Just photoId) (Just (UserLocation 12.34 56.789)))) mbUser
+                        traverse (patchUser userId (UserPatchRequest Nothing (Just photoId) (Just (Coords 12.34 56.789)))) mbUser
                         updatedUser <- getUser userId
                         userPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< updatedUser)
                         return (userCoordinates =<< updatedUser , photoImageUrl <$> userPhoto)
-                userCoords `shouldBe` (Just $ toCoords 12.34 56.789)
+                userCoords `shouldBe` (Just $ Coords 12.34 56.789)
                 userPhotoImageUrl `shouldBe` (Just "https://google.com/clown.png")
             it "gets a user's data with records related to user fields" $ \config -> do
               (uname, uphoto, ucoords) <-
@@ -64,7 +64,7 @@ spec =
                   photoId <- createPhoto photoReq
                   userId <- createUser (reqWithData photoId)
                   userMeta <- getUserMeta userId
-                  return (metaUsername userMeta, photoImageUrl <$> (metaPhoto userMeta), metaCoords userMeta)
+                  return (username userMeta, photoImageUrl <$> (photo userMeta), coordinates userMeta)
               uname `shouldBe` "pat"
               uphoto `shouldBe` (Just "https://google.com/clown.png")
-              ucoords `shouldBe` (Just $ toCoords 12.345 54.321)
+              ucoords `shouldBe` (Just $ Coords 12.345 54.321)
