@@ -51,8 +51,8 @@ import           Web.JWT                          (Algorithm (HS256), JWT,
                                                    unregisteredClaims, verify)
 
 data UserAuth = UserAuth
-    { authUserId :: Int64
-    , authToken  :: Maybe T.Text
+    { userId :: Int64
+    , token  :: Maybe T.Text
     } deriving (Show, Generic)
 
 instance FromJSON UserAuth
@@ -60,15 +60,15 @@ instance FromJSON UserAuth
 instance ToJSON UserAuth
 
 data AuthEntry = AuthEntry
-    { authUsername :: T.Text
-    , authPassword :: T.Text
+    { username :: T.Text
+    , password :: T.Text
     } deriving (Show, Generic)
 
 instance FromJSON AuthEntry
 
 type instance AuthServerData (AuthProtect "jwt-auth") = User
 
-type AuthAPI = "login" :> ReqBody '[ JSON] AuthEntry :> Post '[ JSON] UserAuth
+type AuthAPI = "login" :> ReqBody '[JSON] AuthEntry :> Post '[JSON] UserAuth
 
 authServer :: ServerT AuthAPI App
 authServer = authUser
@@ -125,12 +125,10 @@ authUser authEntry = do
         Nothing -> throwError (apiErr (E404, InvalidCredentials))
         Just person
             | doPasswordsMatch authEntry person ->
-                return $
-                UserAuth
-                {authUserId = (fromSqlKey (entityKey person)), authToken = Just (tokenFromSecret jwtSecret)}
+                return $ UserAuth (fromSqlKey (entityKey person)) (Just (tokenFromSecret jwtSecret))
             | otherwise -> throwError $ apiErr (E400, InvalidCredentials)
   where
-    uName = authUsername authEntry
+    uName = username authEntry
     cs =
         def
         { iss = stringOrURI "TradeLeaf"
@@ -142,7 +140,7 @@ doPasswordsMatch :: AuthEntry -> Entity User -> Bool
 doPasswordsMatch authEntry userToAuth =
     validatePassword
         (BS.pack $ userPassword $ entityVal userToAuth)
-        (BS.pack $ T.unpack $ authPassword authEntry)
+        (BS.pack $ T.unpack $ password authEntry)
 
 validatePasswordLength :: String -> Either ApiErr String
 validatePasswordLength p
