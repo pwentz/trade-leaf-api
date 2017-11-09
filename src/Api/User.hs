@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE TypeOperators     #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 module Api.User where
 
@@ -14,6 +14,7 @@ import           Api.Error                   (ApiErr (..), StatusCode (..),
                                               apiErr, sqlError)
 import           Config                      (App (..), Config (..), getConfig)
 import           Control.Applicative         (liftA2)
+import           Control.Monad               (join)
 import qualified Control.Monad.Except        as BE
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Monad.Trans.Maybe   (MaybeT (..), runMaybeT)
@@ -28,8 +29,9 @@ import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
 import           Models                      (EntityField (UserCoordinates, UserPhotoId, UserUsername),
-                                              Offer (Offer), User (User), runDb,
-                                              runSafeDb, userUsername)
+                                              Photo (Photo), User (User), runDb,
+                                              runSafeDb, userCoordinates,
+                                              userPhotoId, userUsername)
 import           Servant
 
 data UserRequest = UserRequest
@@ -57,32 +59,31 @@ data UserPatchRequest = UserPatchRequest
 
 instance FromJSON UserPatchRequest
 
+data UserMeta = UserMeta
+  { metaId       :: Int64
+  , metaUsername :: String
+  , metaPhoto    :: Maybe Photo
+  , metaCoords   :: Maybe Coords
+  } deriving (Show, Generic)
+
+instance ToJSON UserMeta
+
 type UserAPI
-    = "users" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Get '[JSON] (Entity User)
+    = "users" :> Capture "id" Int64 :> Get '[JSON] UserMeta
      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
      :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserPatchRequest :> AuthProtect "jwt-auth" :> Patch '[JSON] ()
 
 userServer :: ServerT UserAPI App
-userServer = userInfo :<|> createUser :<|> patchUser
+userServer = getUserMeta :<|> createUser :<|> patchUser
 
 getUser :: Int64 -> App (Maybe User)
 getUser = runDb . get . toSqlKey
-
-userInfo :: Int64 -> User -> App (Entity User)
-userInfo userId user = do
-  mbUser <- getUser userId
-  if fromMaybe False (((== user)) <$> mbUser)
-     then
-      return (Entity (toSqlKey userId) user)
-     else
-      throwError $ apiErr (E401, RequestedUserNotAuth)
 
 createUser :: UserRequest -> App Int64
 createUser userReq@UserRequest{..} =
     case validateUser userReq of
         Left e -> throwError $ apiErr (E400, e)
         Right usr -> do
-            time <- liftIO getCurrentTime
             pw <- liftIO (Auth.encodePassword password)
             case pw of
                 Nothing ->
@@ -92,6 +93,7 @@ createUser userReq@UserRequest{..} =
                         , (CustomError
                                "Password was invalid. Please try another password."))
                 Just pass -> do
+                    time <- liftIO getCurrentTime
                     newUser <-
                         runSafeDb $
                         insert
@@ -119,6 +121,16 @@ patchUser userId UserPatchRequest{..} user = do
         runDb $ update ((toSqlKey userId) :: Key User) [UserPhotoId =. (Just (toSqlKey pId))]
       updateCoords userLoc =
         runDb $ update ((toSqlKey userId) :: Key User) [UserCoordinates =. (Just $ coordsFromLocation userLoc)]
+
+getUserMeta :: Int64 -> App UserMeta
+getUserMeta userId = do
+  mbUser <- getUser userId
+  mbPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< mbUser)
+  case mbUser of
+      Nothing ->
+        throwError $ apiErr (E404, UserNotFound userId)
+      Just user ->
+        return (UserMeta userId (userUsername user) mbPhoto (userCoordinates user))
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser (UserRequest u p pc location photoId) =
