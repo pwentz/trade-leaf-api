@@ -9,28 +9,46 @@ import           Test.QuickCheck
 
 import           Control.Monad               (join)
 import           Control.Monad.IO.Class
-import Data.Int (Int64)
+import           Data.Int                    (Int64)
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
 import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey)
 import           Servant
 
+import           Api.Error                   (ApiErr (..))
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
-import           Api.User                    (UserPatchRequest (UserPatchRequest),
+import           Api.User                    (UserMeta (..), UserPatchRequest (UserPatchRequest),
                                               UserRequest (UserRequest),
-                                              UserMeta(..), createUser,
-                                              getUser, patchUser, getUserMeta)
-import           Data.Coords                 (Coords(Coords))
+                                              createUser, getUser, getUserMeta,
+                                              patchUser)
+import           Data.Coords                 (Coords (Coords))
 import           Data.Time                   (UTCTime, getCurrentTime)
 import           Models
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
-defaultReq = UserRequest "username" "password" "password" Nothing Nothing
+defaultReq =
+    UserRequest
+        "pat"
+        "wentz"
+        "pat@gmail.com"
+        "username"
+        "password"
+        "password"
+        Nothing
+        Nothing
 
 reqWithData :: Int64 -> UserRequest
 reqWithData photoId =
-  UserRequest "pat" "password" "password" (Just (Coords 12.345 54.321)) (Just photoId)
+    UserRequest
+        "pat"
+        "wentz"
+        "pat@gmail.com"
+        "pwentz"
+        "password"
+        "password"
+        (Just photoId)
+        (Just (Coords 12.345 54.321))
 
 photoReq :: PhotoRequest
 photoReq = PhotoRequest Nothing "https://google.com/clown.png"
@@ -46,25 +64,52 @@ spec =
                         mbUser <- getUser userId
                         return (userUsername <$> mbUser)
                 dbUser `shouldBe` (Just "username")
+            it "does not create user if passwords are mismatched" $ \config ->
+                  let
+                    badReq =
+                      UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "password" "pasword" Nothing Nothing
+                  in do
+                    runAppToIO config (createUser badReq) `shouldThrow` anyException
+            it "does not create user if password is too short" $ \config ->
+                  let
+                    badReq =
+                      UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "pass" "pass" Nothing Nothing
+                  in do
+                    runAppToIO config (createUser badReq) `shouldThrow` anyException
             it "updates a user's photo and coordinates" $ \config -> do
-                (userCoords, userPhotoImageUrl) <-
-                    runAppToIO config $ do
-                        userId <- createUser defaultReq
-                        photoId <- createPhoto photoReq
-                        mbUser <- getUser userId
-                        traverse (patchUser userId (UserPatchRequest Nothing (Just photoId) (Just (Coords 12.34 56.789)))) mbUser
-                        updatedUser <- getUser userId
-                        userPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< updatedUser)
-                        return (userCoordinates =<< updatedUser , photoImageUrl <$> userPhoto)
-                userCoords `shouldBe` (Just $ Coords 12.34 56.789)
-                userPhotoImageUrl `shouldBe` (Just "https://google.com/clown.png")
+                (patchedUser, photo) <-
+                    let patchReq photoId =
+                            UserPatchRequest
+                                (Just "not pat")
+                                (Just "not wentz")
+                                (Just "pwentz@yahoo.com")
+                                Nothing
+                                (Just photoId)
+                                (Just (Coords 12.34 56.789))
+                    in runAppToIO config $ do
+                           userId <- createUser defaultReq
+                           photoId <- createPhoto photoReq
+                           mbUser <- getUser userId
+                           traverse (patchUser userId (patchReq photoId)) mbUser
+                           updatedUser <- getUser userId
+                           userPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< updatedUser)
+                           return (updatedUser, userPhoto)
+                (userFirstName <$> patchedUser) `shouldBe` (Just "not pat")
+                (userLastName <$> patchedUser) `shouldBe` (Just "not wentz")
+                (userEmail <$> patchedUser) `shouldBe` (Just "pwentz@yahoo.com")
+                (userUsername <$> patchedUser) `shouldBe` (Just "username")
+                (userCoordinates =<< patchedUser) `shouldBe` (Just $ Coords 12.34 56.789)
+                (photoImageUrl <$> photo) `shouldBe` (Just "https://google.com/clown.png")
             it "gets a user's data with records related to user fields" $ \config -> do
-              (uname, uphoto, ucoords) <-
-                runAppToIO config $ do
-                  photoId <- createPhoto photoReq
-                  userId <- createUser (reqWithData photoId)
-                  userMeta <- getUserMeta userId
-                  return (username userMeta, photoImageUrl <$> (photo userMeta), coordinates userMeta)
-              uname `shouldBe` "pat"
-              uphoto `shouldBe` (Just "https://google.com/clown.png")
-              ucoords `shouldBe` (Just $ Coords 12.345 54.321)
+                (uname, uphoto, ucoords) <-
+                    runAppToIO config $ do
+                        photoId <- createPhoto photoReq
+                        userId <- createUser (reqWithData photoId)
+                        userMeta <- getUserMeta userId
+                        return
+                            ( username userMeta
+                            , photoImageUrl <$> (photo userMeta)
+                            , coordinates userMeta)
+                uname `shouldBe` "pwentz"
+                uphoto `shouldBe` (Just "https://google.com/clown.png")
+                ucoords `shouldBe` (Just $ Coords 12.345 54.321)

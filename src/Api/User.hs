@@ -29,43 +29,52 @@ import           Data.Time                   (getCurrentTime)
 import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
-import           Models                      (EntityField (UserCoordinates, UserPhotoId, UserUsername),
-                                              Photo (Photo), User (User), runDb,
-                                              runSafeDb, userCoordinates,
-                                              userPhotoId, userUsername)
+import           Models                      (EntityField (..), Photo (Photo),
+                                              User (User), runDb, runSafeDb,
+                                              userCoordinates, userPhotoId,
+                                              userUsername)
 import           Servant
 
 data UserRequest = UserRequest
-    { username             :: String
+    { firstName            :: String
+    , lastName             :: String
+    , email                :: String
+    , username             :: String
     , password             :: String
     , passwordConfirmation :: String
-    , coordinates          :: Maybe Coords
     , photoId              :: Maybe Int64
+    , coordinates          :: Maybe Coords
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
 
 data UserPatchRequest = UserPatchRequest
-  { username    :: Maybe String
-  , photoId     :: Maybe Int64
-  , coordinates :: Maybe Coords
-  } deriving (Show, Generic)
+    { firstName   :: Maybe String
+    , lastName    :: Maybe String
+    , email       :: Maybe String
+    , username    :: Maybe String
+    , photoId     :: Maybe Int64
+    , coordinates :: Maybe Coords
+    } deriving (Show, Generic)
 
 instance FromJSON UserPatchRequest
 
 data UserMeta = UserMeta
-  { id          :: Int64
-  , username    :: String
-  , photo       :: Maybe Photo
-  , coordinates :: Maybe Coords
-  } deriving (Show, Generic)
+    { id          :: Int64
+    , firstName   :: String
+    , lastName    :: String
+    , email       :: String
+    , username    :: String
+    , photo       :: Maybe Photo
+    , coordinates :: Maybe Coords
+    } deriving (Show, Generic)
 
 instance ToJSON UserMeta
 
 type UserAPI
-    = "users" :> Capture "id" Int64 :> Get '[JSON] UserMeta
-     :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
-     :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserPatchRequest :> AuthProtect "jwt-auth" :> Patch '[JSON] ()
+     = "users" :> Capture "id" Int64 :> Get '[JSON] UserMeta
+      :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] Int64
+      :<|> "users" :> Capture "id" Int64 :> ReqBody '[JSON] UserPatchRequest :> AuthProtect "jwt-auth" :> Patch '[JSON] ()
 
 userServer :: ServerT UserAPI App
 userServer = getUserMeta :<|> createUser :<|> patchUser
@@ -74,7 +83,7 @@ getUser :: Int64 -> App (Maybe User)
 getUser = runDb . get . toSqlKey
 
 createUser :: UserRequest -> App Int64
-createUser userReq@UserRequest{..} =
+createUser userReq@UserRequest {..} =
     case validateUser userReq of
         Left e -> throwError $ apiErr (E400, e)
         Right usr -> do
@@ -91,43 +100,59 @@ createUser userReq@UserRequest{..} =
                     newUser <-
                         runSafeDb $
                         insert
-                            (User username (BS.unpack pass) (toSqlKey <$> photoId) coordinates time time)
+                            (User
+                                 firstName
+                                 lastName
+                                 email
+                                 username
+                                 (BS.unpack pass)
+                                 (toSqlKey <$> photoId)
+                                 coordinates
+                                 time
+                                 time)
                     either
                         (throwError . apiErr . ((,) E401) . sqlError)
                         (return . fromSqlKey)
                         newUser
 
 patchUser :: Int64 -> UserPatchRequest -> User -> App ()
-patchUser userId UserPatchRequest{..} user = do
-  requestedUser <- getUser userId
-  if fromMaybe False ((== user) <$> requestedUser)
-      then do
-        traverse updateUsername username
-        traverse updatePhotoId photoId
-        traverse updateCoords coordinates
-        return ()
-      else
-        throwError $ apiErr (E401, RequestedUserNotAuth)
+patchUser userId UserPatchRequest {..} user = do
+    requestedUser <- getUser userId
+    if fromMaybe False ((== user) <$> requestedUser)
+        then do
+            traverse updateFirstName firstName
+            traverse updateLastName lastName
+            traverse updateEmail email
+            traverse updateUsername username
+            traverse updatePhotoId photoId
+            traverse updateCoords coordinates
+            return ()
+        else throwError $ apiErr (E401, RequestedUserNotAuth)
   where
-      updateUsername name =
-        runDb $ update ((toSqlKey userId) :: Key User) [UserUsername =. name]
-      updatePhotoId pId =
-        runDb $ update ((toSqlKey userId) :: Key User) [UserPhotoId =. (Just (toSqlKey pId))]
-      updateCoords coords =
-        runDb $ update ((toSqlKey userId) :: Key User) [UserCoordinates =. (Just coords)]
+    updateFirstName name =
+        runDb $ update (toSqlKey userId) [UserFirstName =. name]
+    updateLastName name =
+        runDb $ update (toSqlKey userId) [UserLastName =. name]
+    updateEmail email =
+        runDb $ update (toSqlKey userId) [UserEmail =. email]
+    updateUsername name =
+        runDb $ update (toSqlKey userId) [UserUsername =. name]
+    updatePhotoId pId =
+        runDb $ update (toSqlKey userId) [UserPhotoId =. (Just (toSqlKey pId))]
+    updateCoords coords =
+        runDb $ update (toSqlKey userId) [UserCoordinates =. (Just coords)]
 
 getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
-  mbUser <- getUser userId
-  mbPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< mbUser)
-  case mbUser of
-      Nothing ->
-        throwError $ apiErr (E404, UserNotFound userId)
-      Just user ->
-        return (UserMeta userId (userUsername user) mbPhoto (userCoordinates user))
+    mbUser <- getUser userId
+    mbPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< mbUser)
+    case mbUser of
+        Nothing -> throwError $ apiErr (E404, UserNotFound userId)
+        Just (User fstNm lstNm email usernm _ _ coords _ _) ->
+            return (UserMeta userId fstNm lstNm email usernm mbPhoto coords)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
-validateUser (UserRequest u p pc location photoId) =
-    UserRequest <$> pure u <*>
-    (Auth.confirmPassword p pc *> Auth.validatePasswordLength p *> pure p) <*>
-      pure pc <*> pure location <*> pure photoId
+validateUser userReq@UserRequest {..} = do
+  Auth.confirmPassword password passwordConfirmation
+  Auth.validatePasswordLength password
+  return userReq

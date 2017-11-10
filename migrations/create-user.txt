@@ -4,8 +4,11 @@ Depends: create-photo
 Apply: |
   CREATE TABLE "user" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "first_name" VARCHAR(20) NOT NULL,
+    "last_name" VARCHAR(35) NOT NULL,
+    "email" VARCHAR UNIQUE NOT NULL,
     "username" VARCHAR(20) UNIQUE NOT NULL,
-    "password" VARCHAR NOT NULL,
+    "password" VARCHAR(64) NOT NULL,
     "photo_id" INT8 REFERENCES "photo",
     "coordinates" POINT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

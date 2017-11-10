@@ -36,6 +36,10 @@ share
         updatedAt UTCTime default=CURRENT_TIMESTAMP
         deriving Show
     User json
+        firstName String
+        lastName String
+        email String
+        UniqueEmail email
         username String
         UniqueUsername username
         password String
