@@ -68,7 +68,7 @@ instance FromJSON AuthEntry
 
 type instance AuthServerData (AuthProtect "jwt-auth") = User
 
-type AuthAPI = "login" :> ReqBody '[JSON] AuthEntry :> Post '[JSON] UserAuth
+type AuthAPI = "login" :> ReqBody '[ JSON] AuthEntry :> Post '[ JSON] UserAuth
 
 authServer :: ServerT AuthAPI App
 authServer = authUser
@@ -106,12 +106,12 @@ lookUpUser key = do
     cfg <- liftIO getConfig
     enter (convertAppx cfg >>> NT Handler) (userFromDb key)
 
-convertAppx :: Config  -> App :~> BE.ExceptT ServantErr IO
+convertAppx :: Config -> App :~> BE.ExceptT ServantErr IO
 convertAppx cfg = runReaderTNat cfg <<< NT runApp
 
 userFromDb :: String -> App User
 userFromDb str =
-  runDb (selectFirst [UserUsername ==. str] []) >>=
+    runDb (selectFirst [UserUsername ==. str] []) >>=
     maybe (throwError $ apiErr (E404, AuthedUserNotFound)) (return . entityVal)
 
 encodePassword :: String -> IO (Maybe BS.ByteString)
@@ -125,7 +125,10 @@ authUser authEntry = do
         Nothing -> throwError (apiErr (E404, InvalidCredentials))
         Just person
             | doPasswordsMatch authEntry person ->
-                return $ UserAuth (fromSqlKey (entityKey person)) (Just (tokenFromSecret jwtSecret))
+                return $
+                UserAuth
+                    (fromSqlKey (entityKey person))
+                    (Just (tokenFromSecret jwtSecret))
             | otherwise -> throwError $ apiErr (E400, InvalidCredentials)
   where
     uName = username authEntry
