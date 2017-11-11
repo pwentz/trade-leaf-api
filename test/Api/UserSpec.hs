@@ -12,7 +12,7 @@ import           Control.Monad.IO.Class
 import           Data.Int                    (Int64)
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
-import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey)
+import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey, insert)
 import           Servant
 
 import           Api.Error                   (ApiErr (..))
@@ -93,15 +93,16 @@ spec =
                 (userCoordinates =<< patchedUser) `shouldBe` (Just $ Coords 12.34 56.789)
                 (photoImageUrl <$> photo) `shouldBe` (Just "https://google.com/clown.png")
             it "gets a user's data with records related to user fields" $ \config -> do
-                (uname, uphoto, ucoords) <-
+                time <- liftIO getCurrentTime
+                userMeta <-
                     runAppToIO config $ do
                         photoId <- createPhoto photoReq
                         userId <- createUser (reqWithData photoId)
-                        userMeta <- getUserMeta userId
-                        return
-                            ( username userMeta
-                            , photoImageUrl <$> (photo userMeta)
-                            , coordinates userMeta)
-                uname `shouldBe` "pwentz"
-                uphoto `shouldBe` (Just "https://google.com/clown.png")
-                ucoords `shouldBe` (Just $ Coords 12.345 54.321)
+                        categoryId <- runDb $ insert (Category "stuff" time time)
+                        userOfferId1 <- runDb $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "babysitting" 5 time time)
+                        userOfferId2 <- runDb $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "carpentry" 5 time time)
+                        getUserMeta userId
+                (username userMeta) `shouldBe` "pwentz"
+                (photoImageUrl <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")
+                (coordinates userMeta) `shouldBe` (Just $ Coords 12.345 54.321)
+                (offerDescription <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]

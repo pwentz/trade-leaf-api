@@ -30,10 +30,11 @@ import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
 import           GHC.Generics                (Generic)
 import           Models                      (EntityField (..), Photo (Photo),
-                                              User (User), runDb, runSafeDb,
+                                              User (User), Offer (Offer), runDb, runSafeDb,
                                               userCoordinates, userPhotoId,
                                               userUsername)
 import           Servant
+import Queries.Offer (userOffers)
 
 data UserRequest = UserRequest
     { firstName            :: String
@@ -66,6 +67,7 @@ data UserMeta = UserMeta
     , username    :: String
     , photo       :: Maybe Photo
     , coordinates :: Maybe Coords
+    , offers      :: [Offer]
     } deriving (Show, Generic)
 
 instance ToJSON UserMeta
@@ -145,10 +147,11 @@ getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
     mbUser <- getUser userId
     mbPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< mbUser)
+    offers <- (fmap entityVal) <$> userOffers (toSqlKey userId)
     case mbUser of
         Nothing -> throwError $ apiErr (E404, UserNotFound userId)
         Just (User fstNm lstNm email usernm _ _ coords _ _) ->
-            return (UserMeta userId fstNm lstNm email usernm mbPhoto coords)
+            return (UserMeta userId fstNm lstNm email usernm mbPhoto coords offers)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser userReq@UserRequest {..} = do
