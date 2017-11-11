@@ -41,7 +41,6 @@ data UserRequest = UserRequest
     , email                :: String
     , username             :: String
     , password             :: String
-    , passwordConfirmation :: String
     , photoId              :: Maybe Int64
     , coordinates          :: Maybe Coords
     } deriving (Show, Generic)
@@ -153,6 +152,5 @@ getUserMeta userId = do
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser userReq@UserRequest {..} = do
-  Auth.confirmPassword password passwordConfirmation
   Auth.validatePasswordLength password
   return userReq

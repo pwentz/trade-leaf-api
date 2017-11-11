@@ -149,8 +149,3 @@ validatePasswordLength :: String -> Either ApiErr String
 validatePasswordLength p
     | length p >= 6 = Right p
     | otherwise = Left PasswordLengthLT6
-
-confirmPassword :: String -> String -> Either ApiErr String
-confirmPassword p cp
-    | cp == p = Right p
-    | otherwise = Left PasswordConfirmationMismatch
