@@ -11,7 +11,6 @@ import           Data.Coords          (distanceInMiles)
 import           Data.Maybe           (fromMaybe)
 import           Database.Esqueleto
 import qualified Database.Persist.Sql as Sql
-import           Debug.Trace
 import           Models
 
 
