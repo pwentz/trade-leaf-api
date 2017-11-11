@@ -34,7 +34,6 @@ defaultReq =
         "pat@gmail.com"
         "username"
         "password"
-        "password"
         Nothing
         Nothing
 
@@ -45,7 +44,6 @@ reqWithData photoId =
         "wentz"
         "pat@gmail.com"
         "pwentz"
-        "password"
         "password"
         (Just photoId)
         (Just (Coords 12.345 54.321))
@@ -64,16 +62,10 @@ spec =
                         mbUser <- getUser userId
                         return (userUsername <$> mbUser)
                 dbUser `shouldBe` (Just "username")
-            it "does not create user if passwords are mismatched" $ \config ->
-                  let
-                    badReq =
-                      UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "password" "pasword" Nothing Nothing
-                  in do
-                    runAppToIO config (createUser badReq) `shouldThrow` anyException
             it "does not create user if password is too short" $ \config ->
                   let
                     badReq =
-                      UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "pass" "pass" Nothing Nothing
+                      UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "pass" Nothing Nothing
                   in do
                     runAppToIO config (createUser badReq) `shouldThrow` anyException
             it "updates a user's photo and coordinates" $ \config -> do
