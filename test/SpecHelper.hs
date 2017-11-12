@@ -9,7 +9,12 @@ import           Control.Monad.Reader        (runReaderT)
 import           Database.Persist.Postgresql (runSqlPool)
 import           Database.Persist.Sql        (ConnectionPool, Filter,
                                               deleteWhere)
-import           Models
+import qualified Db.Main                     as Db
+import           Models.Category
+import           Models.Offer
+import           Models.Photo
+import           Models.Request
+import           Models.User
 
 runAppToIO :: Config -> App a -> IO a
 runAppToIO config app = do
@@ -27,7 +32,7 @@ setupTeardown runTestsWith = do
     cleanDb pool
   where
     migrateDb :: ConnectionPool -> IO ()
-    migrateDb pool = runSqlPool doMigrations pool
+    migrateDb pool = runSqlPool Db.doMigrations pool
     cleanDb :: ConnectionPool -> IO ()
     cleanDb pool = do
         runSqlPool (deleteWhere ([] :: [Filter Request])) pool

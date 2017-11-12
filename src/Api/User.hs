@@ -28,22 +28,22 @@ import           Data.Maybe                  (fromMaybe)
 import           Data.Time                   (getCurrentTime)
 import           Database.Persist.Postgresql (Entity (..), Key, fromSqlKey, get,
                                               insert, toSqlKey, update, (=.))
+import qualified Db.Main                     as Db
 import           GHC.Generics                (Generic)
-import           Models                      (EntityField (..), Photo (Photo),
-                                              User (User), Offer (Offer), runDb, runSafeDb,
-                                              userCoordinates, userPhotoId,
-                                              userUsername)
+import           Models.Offer
+import           Models.Photo
+import           Models.User
+import           Queries.Offer               (userOffers)
 import           Servant
-import Queries.Offer (userOffers)
 
 data UserRequest = UserRequest
-    { firstName            :: String
-    , lastName             :: String
-    , email                :: String
-    , username             :: String
-    , password             :: String
-    , photoId              :: Maybe Int64
-    , coordinates          :: Maybe Coords
+    { firstName   :: String
+    , lastName    :: String
+    , email       :: String
+    , username    :: String
+    , password    :: String
+    , photoId     :: Maybe Int64
+    , coordinates :: Maybe Coords
     } deriving (Show, Generic)
 
 instance FromJSON UserRequest
@@ -81,7 +81,7 @@ userServer :: ServerT UserAPI App
 userServer = getUserMeta :<|> createUser :<|> patchUser
 
 getUser :: Int64 -> App (Maybe User)
-getUser = runDb . get . toSqlKey
+getUser = Db.run . get . toSqlKey
 
 createUser :: UserRequest -> App Int64
 createUser userReq@UserRequest {..} =
@@ -99,7 +99,7 @@ createUser userReq@UserRequest {..} =
                 Just pass -> do
                     time <- liftIO getCurrentTime
                     newUser <-
-                        runSafeDb $
+                        Db.runSafe $
                         insert
                             (User
                                  firstName
@@ -131,27 +131,27 @@ patchUser userId UserPatchRequest {..} user = do
         else throwError $ apiErr (E401, RequestedUserNotAuth)
   where
     updateFirstName name =
-        runDb $ update (toSqlKey userId) [UserFirstName =. name]
+        Db.run $ update (toSqlKey userId) [UserFirstName =. name]
     updateLastName name =
-        runDb $ update (toSqlKey userId) [UserLastName =. name]
+        Db.run $ update (toSqlKey userId) [UserLastName =. name]
     updateEmail email =
-        runDb $ update (toSqlKey userId) [UserEmail =. email]
+        Db.run $ update (toSqlKey userId) [UserEmail =. email]
     updateUsername name =
-        runDb $ update (toSqlKey userId) [UserUsername =. name]
+        Db.run $ update (toSqlKey userId) [UserUsername =. name]
     updatePhotoId pId =
-        runDb $ update (toSqlKey userId) [UserPhotoId =. (Just (toSqlKey pId))]
+        Db.run $ update (toSqlKey userId) [UserPhotoId =. (Just (toSqlKey pId))]
     updateCoords coords =
-        runDb $ update (toSqlKey userId) [UserCoordinates =. (Just coords)]
+        Db.run $ update (toSqlKey userId) [UserCoordinates =. (Just coords)]
 
 getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
     mbUser <- getUser userId
-    mbPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< mbUser)
+    mbPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< mbUser)
     offers <- (fmap entityVal) <$> userOffers (toSqlKey userId)
     case mbUser of
         Nothing -> throwError $ apiErr (E404, UserNotFound userId)
-        Just (User fstNm lstNm email usernm _ _ coords _ _) ->
-            return (UserMeta userId fstNm lstNm email usernm mbPhoto coords offers)
+        Just User {..} ->
+            return (UserMeta userId userFirstName userLastName userEmail userUsername mbPhoto userCoordinates offers)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser userReq@UserRequest {..} = do

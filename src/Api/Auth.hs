@@ -20,8 +20,8 @@ import           GHC.Generics                     (Generic)
 import           Crypto.BCrypt                    (fastBcryptHashingPolicy,
                                                    hashPasswordUsingPolicy,
                                                    validatePassword)
-import           Models                           (EntityField (UserUsername),
-                                                   User, runDb, userPassword)
+import           Models.User
+import qualified Db.Main                          as Db
 
 import           Api.Error                        (ApiErr (..), StatusCode (..),
                                                    apiErr)
@@ -111,7 +111,7 @@ convertAppx cfg = runReaderTNat cfg <<< NT runApp
 
 userFromDb :: String -> App User
 userFromDb str =
-    runDb (selectFirst [UserUsername ==. str] []) >>=
+    Db.run (selectFirst [UserUsername ==. str] []) >>=
     maybe (throwError $ apiErr (E404, AuthedUserNotFound)) (return . entityVal)
 
 encodePassword :: String -> IO (Maybe BS.ByteString)
@@ -120,7 +120,7 @@ encodePassword = hashPasswordUsingPolicy fastBcryptHashingPolicy . BS.pack
 authUser :: AuthEntry -> App UserAuth
 authUser authEntry = do
     jwtSecret <- liftIO (getJwtSecret <$> getConfig)
-    maybeUser <- runDb (selectFirst [UserUsername ==. (T.unpack uName)] [])
+    maybeUser <- Db.run (selectFirst [UserUsername ==. (T.unpack uName)] [])
     case maybeUser of
         Nothing -> throwError (apiErr (E404, InvalidCredentials))
         Just person
