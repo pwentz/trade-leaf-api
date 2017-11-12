@@ -12,7 +12,8 @@ import           Data.Int               (Int64)
 import           Data.Time              (getCurrentTime)
 import qualified Database.Persist.Sql   as Sql
 import           GHC.Generics           (Generic)
-import           Models                 (Photo (Photo), runSafeDb)
+import qualified Db.Main                as Db
+import           Models.Photo           (Photo (Photo))
 import           Servant
 
 data PhotoRequest = PhotoRequest
@@ -31,7 +32,7 @@ photoServer = createPhoto
 createPhoto :: PhotoRequest -> App Int64
 createPhoto (PhotoRequest cloudId url) = do
     time <- liftIO getCurrentTime
-    eitherPhoto <- runSafeDb $ Sql.insert (Photo cloudId url time time)
+    eitherPhoto <- Db.runSafe $ Sql.insert (Photo cloudId url time time)
     either
         (throwError . apiErr . ((,) E401) . sqlError)
         (return . Sql.fromSqlKey)

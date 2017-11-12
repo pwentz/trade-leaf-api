@@ -1,12 +1,12 @@
 module Api.PhotoSpec where
 
-import Test.Hspec
-import Test.QuickCheck
-import SpecHelper (runAppToIO, setupTeardown)
-import Api.Photo (PhotoRequest (..), createPhoto)
-import Models (runDb)
-import Database.Persist.Sql (fromSqlKey, get, toSqlKey)
-import Models (photoImageUrl)
+import           Api.Photo            (PhotoRequest (..), createPhoto)
+import           Database.Persist.Sql (fromSqlKey, get, toSqlKey)
+import qualified Db.Main              as Db
+import           Models.Photo         (photoImageUrl)
+import           SpecHelper           (runAppToIO, setupTeardown)
+import           Test.Hspec
+import           Test.QuickCheck
 
 
 spec :: Spec
@@ -17,6 +17,6 @@ spec =
         photoUrl <-
           runAppToIO config $ do
             photoId <- createPhoto (PhotoRequest Nothing "https://google.com/image/clown.png")
-            mbPhoto <- runDb $ get (toSqlKey photoId)
+            mbPhoto <- Db.run $ get (toSqlKey photoId)
             return (photoImageUrl <$> mbPhoto)
         photoUrl `shouldBe` (Just "https://google.com/image/clown.png")

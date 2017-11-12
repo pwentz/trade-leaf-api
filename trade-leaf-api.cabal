@@ -40,7 +40,6 @@ library
         src
     exposed-modules:
         Config
-      , Models
       , Api
       , Api.User
       , Api.Auth
@@ -50,6 +49,12 @@ library
       , Data.Coords
       , MatchFinder
       , Queries.Offer
+      , Models.Photo
+      , Models.User
+      , Models.Category
+      , Models.Offer
+      , Models.Request
+      , Db.Main
     build-depends:
         base >= 4.7 && < 5
       , aeson

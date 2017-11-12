@@ -11,7 +11,10 @@ import           Data.Coords          (distanceInMiles)
 import           Data.Maybe           (fromMaybe)
 import           Database.Esqueleto
 import qualified Database.Persist.Sql as Sql
-import           Models
+import           Models.User
+import           Models.Offer
+import           Models.Request
+import qualified Db.Main as Db
 
 
 {-| find all matches within radius -}
@@ -28,7 +31,7 @@ findMatches user =
                 on (requests ^. RequestCategoryId ==. offers ^. OfferCategoryId)
                 where_ (users ^. UserUsername ==. val (userUsername user))
                 return requests
-    in runDb $
+    in Db.run $
        select $
        from $ \offers -> do
            userReq <- userReqs user
@@ -44,7 +47,7 @@ matchesByUser user =
                 on (offers ^. OfferId ==. requests ^. RequestOfferId)
                 where_ (users ^. UserUsername ==. val (userUsername user))
                 return requests
-    in runDb $
+    in Db.run $
        select $
        from $ \(offers `InnerJoin` users) -> do
            on (offers ^. OfferUserId ==. users ^. UserId)
@@ -56,7 +59,7 @@ matchesByUser user =
 {-| Finds all matches for offer belonging to user -}
 findUserMatches :: User -> Offer -> App [Sql.Entity Offer]
 findUserMatches currentUser offer =
-    runDb $
+    Db.run $
     select $
     from $ \(requests `InnerJoin` offers `InnerJoin` users) -> do
         on (offers ^. OfferUserId ==. users ^. UserId)

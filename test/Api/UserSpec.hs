@@ -12,7 +12,7 @@ import           Control.Monad.IO.Class
 import           Data.Int                    (Int64)
 import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
                                               selectFirst, selectList, (==.))
-import           Database.Persist.Sql        (fromSqlKey, get, toSqlKey, insert)
+import           Database.Persist.Sql        (fromSqlKey, get, insert, toSqlKey)
 import           Servant
 
 import           Api.Error                   (ApiErr (..))
@@ -23,7 +23,11 @@ import           Api.User                    (UserMeta (..), UserPatchRequest (U
                                               patchUser)
 import           Data.Coords                 (Coords (Coords))
 import           Data.Time                   (UTCTime, getCurrentTime)
-import           Models
+import qualified Db.Main                     as Db
+import           Models.Category
+import           Models.Offer
+import           Models.Photo
+import           Models.User
 import           SpecHelper                  (runAppToIO, setupTeardown)
 
 defaultReq :: UserRequest
@@ -84,7 +88,7 @@ spec =
                            mbUser <- getUser userId
                            traverse (patchUser userId (patchReq photoId)) mbUser
                            updatedUser <- getUser userId
-                           userPhoto <- join <$> traverse (runDb . get) (userPhotoId =<< updatedUser)
+                           userPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< updatedUser)
                            return (updatedUser, userPhoto)
                 (userFirstName <$> patchedUser) `shouldBe` (Just "not pat")
                 (userLastName <$> patchedUser) `shouldBe` (Just "not wentz")
@@ -98,9 +102,9 @@ spec =
                     runAppToIO config $ do
                         photoId <- createPhoto photoReq
                         userId <- createUser (reqWithData photoId)
-                        categoryId <- runDb $ insert (Category "stuff" time time)
-                        userOfferId1 <- runDb $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "babysitting" 5 time time)
-                        userOfferId2 <- runDb $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "carpentry" 5 time time)
+                        categoryId <- Db.run $ insert (Category "stuff" time time)
+                        userOfferId1 <- Db.run $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "babysitting" 5 time time)
+                        userOfferId2 <- Db.run $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "carpentry" 5 time time)
                         getUserMeta userId
                 (username userMeta) `shouldBe` "pwentz"
                 (photoImageUrl <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")

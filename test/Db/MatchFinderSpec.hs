@@ -6,8 +6,13 @@ import           Data.Coords                 (Coords (Coords))
 import           Data.Time                   (getCurrentTime)
 import           Database.Persist            (get)
 import qualified Database.Persist.Postgresql as Sql
+import qualified Db.Main                     as Db
 import           MatchFinder
-import           Models
+import           Models.Category
+import           Models.Offer
+import           Models.Photo
+import           Models.Request
+import           Models.User
 import           SpecHelper                  (runAppToIO, setupTeardown)
 import           Test.Hspec
 import           Test.QuickCheck
@@ -34,18 +39,18 @@ dbSetup =
       User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time time
   in do
     time <- liftIO getCurrentTime
-    photoId <- runDb $ Sql.insert (Photo Nothing "" time time)
-    handyCatKey <- runDb $ Sql.insert (Category "handywork" time time)
-    artCatKey <- runDb $ Sql.insert (Category "decorative art" time time)
-    user1Key <- runDb $ Sql.insert (currentUser time)
-    offer1Key <- runDb $ Sql.insert (Offer user1Key artCatKey photoId "painting" 999 time time)
-    request1Key <- runDb $ Sql.insert (Request offer1Key handyCatKey "sand fence plz" time time)
-    user2Key <- runDb $ Sql.insert (User "fred" "jones" "fred@gmail.com" "freddy" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time time)
-    offer2Key <- runDb $ Sql.insert (Offer user2Key handyCatKey photoId "i sand fence" 10 time time)
-    request2Key <- runDb $ Sql.insert (Request offer2Key artCatKey "i like painting plz" time time)
-    user3Key <- runDb $ Sql.insert (User "bill" "johnson" "bjohn@gmail.com" "billy" "password" Nothing (Just $ Coords 42.858731 (-89.828149)) time time)
-    offer3Key <- runDb $ Sql.insert (Offer user3Key handyCatKey photoId "i've sanded once" 1 time time)
-    request3Key <- runDb $ Sql.insert (Request offer3Key artCatKey "i've always wanted a painting" time time)
+    photoId <- Db.run $ Sql.insert (Photo Nothing "" time time)
+    handyCatKey <- Db.run $ Sql.insert (Category "handywork" time time)
+    artCatKey <- Db.run $ Sql.insert (Category "decorative art" time time)
+    user1Key <- Db.run $ Sql.insert (currentUser time)
+    offer1Key <- Db.run $ Sql.insert (Offer user1Key artCatKey photoId "painting" 999 time time)
+    request1Key <- Db.run $ Sql.insert (Request offer1Key handyCatKey "sand fence plz" time time)
+    user2Key <- Db.run $ Sql.insert (User "fred" "jones" "fred@gmail.com" "freddy" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time time)
+    offer2Key <- Db.run $ Sql.insert (Offer user2Key handyCatKey photoId "i sand fence" 10 time time)
+    request2Key <- Db.run $ Sql.insert (Request offer2Key artCatKey "i like painting plz" time time)
+    user3Key <- Db.run $ Sql.insert (User "bill" "johnson" "bjohn@gmail.com" "billy" "password" Nothing (Just $ Coords 42.858731 (-89.828149)) time time)
+    offer3Key <- Db.run $ Sql.insert (Offer user3Key handyCatKey photoId "i've sanded once" 1 time time)
+    request3Key <- Db.run $ Sql.insert (Request offer3Key artCatKey "i've always wanted a painting" time time)
     return (currentUser time)
 
 complexDbSetup :: App User
@@ -55,35 +60,35 @@ complexDbSetup =
       User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time time
   in do
     time <- liftIO getCurrentTime
-    photoId <- runDb $ Sql.insert (Photo Nothing "" time time)
-    handyCatKey <- runDb $ Sql.insert (Category "handywork" time time)
-    artCatKey <- runDb $ Sql.insert (Category "decorative art" time time)
-    babysitCatKey <- runDb $ Sql.insert (Category "babysitter" time time)
-    currUserKey <- runDb $ Sql.insert (currentUser time)
-    currUserOffer1 <- runDb $ Sql.insert (Offer currUserKey artCatKey photoId "i offer painting" 999 time time)
-    currUserOffer2 <- runDb $ Sql.insert (Offer currUserKey babysitCatKey photoId "i will sit baby" 15 time time)
-    _ <- runDb $ Sql.insert (Request currUserOffer1 handyCatKey "sand fence plz" time time)
-    _ <- runDb $ Sql.insert (Request currUserOffer2 artCatKey "i need painting" time time)
+    photoId <- Db.run $ Sql.insert (Photo Nothing "" time time)
+    handyCatKey <- Db.run $ Sql.insert (Category "handywork" time time)
+    artCatKey <- Db.run $ Sql.insert (Category "decorative art" time time)
+    babysitCatKey <- Db.run $ Sql.insert (Category "babysitter" time time)
+    currUserKey <- Db.run $ Sql.insert (currentUser time)
+    currUserOffer1 <- Db.run $ Sql.insert (Offer currUserKey artCatKey photoId "i offer painting" 999 time time)
+    currUserOffer2 <- Db.run $ Sql.insert (Offer currUserKey babysitCatKey photoId "i will sit baby" 15 time time)
+    _ <- Db.run $ Sql.insert (Request currUserOffer1 handyCatKey "sand fence plz" time time)
+    _ <- Db.run $ Sql.insert (Request currUserOffer2 artCatKey "i need painting" time time)
     {-| 6 miles from currentUser -}
-    user1Key <- runDb $ Sql.insert (User "Otto" "porter" "otto@gmail.com" "ottop" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time time)
-    user1Offer <- runDb $ Sql.insert (Offer user1Key handyCatKey photoId "i sand fence" 10 time time)
-    _ <- runDb $ Sql.insert (Request user1Offer artCatKey "i like painting plz" time time)
+    user1Key <- Db.run $ Sql.insert (User "Otto" "porter" "otto@gmail.com" "ottop" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time time)
+    user1Offer <- Db.run $ Sql.insert (Offer user1Key handyCatKey photoId "i sand fence" 10 time time)
+    _ <- Db.run $ Sql.insert (Request user1Offer artCatKey "i like painting plz" time time)
     {-| 4 miles from currentUser -}
-    user2Key <- runDb $ Sql.insert (User "Tim" "Thomas" "tim@gmail.com" "timmy_two_time" "password" Nothing (Just $ Coords 41.888730 (-87.687969)) time time)
-    user2Offer <- runDb $ Sql.insert (Offer user2Key handyCatKey photoId "i've sanded once" 1 time time)
-    _ <- runDb $ Sql.insert (Request user2Offer artCatKey "i've always wanted a painting" time time)
+    user2Key <- Db.run $ Sql.insert (User "Tim" "Thomas" "tim@gmail.com" "timmy_two_time" "password" Nothing (Just $ Coords 41.888730 (-87.687969)) time time)
+    user2Offer <- Db.run $ Sql.insert (Offer user2Key handyCatKey photoId "i've sanded once" 1 time time)
+    _ <- Db.run $ Sql.insert (Request user2Offer artCatKey "i've always wanted a painting" time time)
     {-| 18 miles from currentUser -}
-    user3Key <- runDb $ Sql.insert (User "Theron" "Mitchell" "theron@gmail.com" "the_ron" "password" Nothing (Just $ Coords 41.680753 (-87.698157)) time time)
-    user3Offer <- runDb $ Sql.insert (Offer user3Key artCatKey photoId "warhol" 20 time time)
-    _ <- runDb $ Sql.insert (Request user3Offer babysitCatKey "my baby needs sitting" time time)
+    user3Key <- Db.run $ Sql.insert (User "Theron" "Mitchell" "theron@gmail.com" "the_ron" "password" Nothing (Just $ Coords 41.680753 (-87.698157)) time time)
+    user3Offer <- Db.run $ Sql.insert (Offer user3Key artCatKey photoId "warhol" 20 time time)
+    _ <- Db.run $ Sql.insert (Request user3Offer babysitCatKey "my baby needs sitting" time time)
     {-| 14 miles from currentUser -}
-    user4Key <- runDb $ Sql.insert (User "Felicia" "James" "felic@yahoo.com" "fjames" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time time)
-    user4Offer <- runDb $ Sql.insert (Offer user4Key artCatKey photoId "i fingerpainted" 10 time time)
-    _ <- runDb $ Sql.insert (Request user4Offer babysitCatKey "SIT ON MY BABY" time time)
+    user4Key <- Db.run $ Sql.insert (User "Felicia" "James" "felic@yahoo.com" "fjames" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time time)
+    user4Offer <- Db.run $ Sql.insert (Offer user4Key artCatKey photoId "i fingerpainted" 10 time time)
+    _ <- Db.run $ Sql.insert (Request user4Offer babysitCatKey "SIT ON MY BABY" time time)
     {-| 9 miles from currentUser -}
-    user5Key <- runDb $ Sql.insert (User "Phil" "Q" "phil@q.com" "philQ" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time time)
-    user5Offer <- runDb $ Sql.insert (Offer user5Key artCatKey photoId "it is abstract" 10 time time)
-    _ <- runDb $ Sql.insert (Request user5Offer babysitCatKey "watch all the kids" time time)
+    user5Key <- Db.run $ Sql.insert (User "Phil" "Q" "phil@q.com" "philQ" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time time)
+    user5Offer <- Db.run $ Sql.insert (Offer user5Key artCatKey photoId "it is abstract" 10 time time)
+    _ <- Db.run $ Sql.insert (Request user5Offer babysitCatKey "watch all the kids" time time)
     return (currentUser time)
 
 spec :: Spec
@@ -99,7 +104,7 @@ spec = do
             it "can find a user's matching offers by offer" $ \config -> do
               matchDescriptions <- runAppToIO config $ do
                   currUser <- complexDbSetup
-                  mbOffer <- runDb $ Sql.selectFirst [OfferDescription Sql.==. "warhol"] []
+                  mbOffer <- Db.run $ Sql.selectFirst [OfferDescription Sql.==. "warhol"] []
                   mbMatches <- traverse (findUserMatches currUser . Sql.entityVal) mbOffer
                   return $ (fmap . fmap) (offerDescription . Sql.entityVal) mbMatches
               matchDescriptions `shouldBe` (Just ["i will sit baby"])
