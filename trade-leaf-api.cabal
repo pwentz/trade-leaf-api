@@ -45,9 +45,11 @@ library
       , Api.Auth
       , Api.Error
       , Api.Photo
+      , Api.Match
+      , Api.Offer
       , Utils
       , Data.Coords
-      , MatchFinder
+      , Queries.Match
       , Queries.Offer
       , Models.Photo
       , Models.User
@@ -99,7 +101,9 @@ test-suite trade-leaf-api-test
       , Api.ErrorSpec
       , Api.PhotoSpec
       , Api.UserSpec
-      , Db.MatchFinderSpec
+      , Api.MatchSpec
+      , Api.OfferSpec
+      , Queries.MatchSpec
       , Queries.OfferSpec
       , UtilsSpec
       , CoordsSpec

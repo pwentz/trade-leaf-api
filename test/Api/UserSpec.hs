@@ -107,6 +107,6 @@ spec =
                         userOfferId2 <- Db.run $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "carpentry" 5 time time)
                         getUserMeta userId
                 (username userMeta) `shouldBe` "pwentz"
-                (photoImageUrl <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")
+                ((photoImageUrl . entityVal) <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")
                 (coordinates userMeta) `shouldBe` (Just $ Coords 12.345 54.321)
-                (offerDescription <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]
+                ((offerDescription . entityVal) <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]

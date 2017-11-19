@@ -19,7 +19,7 @@ import           Servant
 data PhotoRequest = PhotoRequest
     { cloudinaryId :: Maybe String
     , imageUrl     :: String
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 
 instance FromJSON PhotoRequest
 

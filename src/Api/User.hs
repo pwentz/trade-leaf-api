@@ -65,9 +65,9 @@ data UserMeta = UserMeta
     , lastName    :: String
     , email       :: String
     , username    :: String
-    , photo       :: Maybe Photo
+    , photo       :: Maybe (Entity Photo)
     , coordinates :: Maybe Coords
-    , offers      :: [Offer]
+    , offers      :: [Entity Offer]
     } deriving (Show, Generic)
 
 instance ToJSON UserMeta
@@ -147,11 +147,11 @@ getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
     mbUser <- getUser userId
     mbPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< mbUser)
-    offers <- (fmap entityVal) <$> userOffers (toSqlKey userId)
+    offers <- userOffers (toSqlKey userId)
     case mbUser of
         Nothing -> throwError $ apiErr (E404, UserNotFound userId)
         Just User {..} ->
-            return (UserMeta userId userFirstName userLastName userEmail userUsername mbPhoto userCoordinates offers)
+          return (UserMeta userId userFirstName userLastName userEmail userUsername (liftA2 Entity userPhotoId mbPhoto) userCoordinates offers)
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser userReq@UserRequest {..} = do
