@@ -3,7 +3,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeOperators         #-}
 
-
 module Api.Offer where
 
 import           Api.Photo                   (PhotoRequest (..))
@@ -12,6 +11,7 @@ import           Control.Applicative         (liftA2, liftA3)
 import           Control.Monad               (join)
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
+import qualified Database.Esqueleto          as E
 import           Database.Persist.Postgresql (Entity, entityKey, entityVal,
                                               fromSqlKey, get, selectFirst,
                                               toSqlKey, (==.))
@@ -20,16 +20,19 @@ import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
-import           Queries.Offer               (userOffers)
+import           Queries.Offer               (getOfferData, userOffers)
+import           Utils                       (first, sHead)
 
 data RequestResponse = RequestResponse
-    { offerId     :: Int64
+    { id          :: Int64
+    , offerId     :: Int64
     , category    :: String
     , description :: String
     } deriving (Eq, Show)
 
 data OfferResponse = OfferResponse
-    { userId      :: Int64
+    { id          :: Int64
+    , userId      :: Int64
     , description :: String
     , category    :: String
     , request     :: RequestResponse
@@ -38,31 +41,36 @@ data OfferResponse = OfferResponse
 
 getOffers :: Int64 -> App [OfferResponse]
 getOffers userId = do
-  offers <- userOffers (toSqlKey userId)
-  offerResponses <- sequence <$> traverse toOfferResponse offers
-  return $ fromMaybe [] offerResponses
+    offers <- userOffers (toSqlKey userId)
+    offerResponses <- sequence <$> traverse toOfferResponse offers
+    return (fromMaybe [] offerResponses)
+
+toRequestResponse :: Entity Request -> App (Maybe RequestResponse)
+toRequestResponse req = do
+    reqCat <-
+        (categoryName <$>) <$>
+        ((Db.run . get . requestCategoryId . entityVal) req)
+    case reqCat of
+        Nothing -> return Nothing
+        Just catNm ->
+            (return . return) $
+            RequestResponse
+                (fromSqlKey $ entityKey req)
+                ((fromSqlKey . requestOfferId . entityVal) req)
+                catNm
+                (requestDescription $ entityVal req)
 
 toOfferResponse :: Entity Offer -> App (Maybe OfferResponse)
 toOfferResponse offer =
-  let
-    toPhotoReq =
-      liftA2 PhotoRequest photoCloudinaryId photoImageUrl
-    toReq req catNm =
-      RequestResponse (fromSqlKey $ requestOfferId req) catNm (requestDescription req)
-  in do
-  mbReq <- (entityVal <$>) <$> (Db.run $ selectFirst [RequestOfferId ==. (entityKey offer)] [])
-  mbReqCatNm <- ((categoryName <$>) . join) <$> traverse (Db.run . get . requestCategoryId) mbReq
-  mbPhoto <- Db.run $ get (offerPhotoId $ entityVal offer)
-  mbCategoryNm <- (categoryName <$>) <$> (Db.run $ get (offerCategoryId $ entityVal offer))
-  return $ do
-    reqRes <- liftA2 toReq mbReq mbReqCatNm
-    photoData <- toPhotoReq <$> mbPhoto
-    catNm <- mbCategoryNm
-    return $
-      OfferResponse
-        { userId = (fromSqlKey . offerUserId . entityVal) offer
-        , description = offerDescription $ entityVal offer
-        , category = catNm
-        , request = reqRes
-        , photo = photoData
-        }
+    let mkPhotoRes = liftA2 PhotoRequest photoCloudinaryId photoImageUrl
+        mkOfferRes (_, catNm, photo) reqRes =
+            OfferResponse
+                (fromSqlKey $ entityKey offer)
+                ((fromSqlKey . offerUserId . entityVal) offer)
+                (offerDescription $ entityVal offer)
+                (E.unValue catNm)
+                reqRes
+                (mkPhotoRes $ entityVal photo)
+    in do mbData <- sHead <$> getOfferData offer
+          reqRes <- join <$> traverse toRequestResponse (first <$> mbData)
+          return (liftA2 mkOfferRes mbData reqRes)
