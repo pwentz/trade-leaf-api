@@ -45,10 +45,14 @@ library
       , Api.Auth
       , Api.Error
       , Api.Photo
+      , Api.Match
+      , Api.Offer
+      , Api.Request
       , Utils
       , Data.Coords
-      , MatchFinder
+      , Queries.Match
       , Queries.Offer
+      , Queries.Request
       , Models.Photo
       , Models.User
       , Models.Category
@@ -99,8 +103,12 @@ test-suite trade-leaf-api-test
       , Api.ErrorSpec
       , Api.PhotoSpec
       , Api.UserSpec
-      , Db.MatchFinderSpec
+      , Api.MatchSpec
+      , Api.OfferSpec
+      , Api.RequestSpec
+      , Queries.MatchSpec
       , Queries.OfferSpec
+      , Queries.RequestSpec
       , UtilsSpec
       , CoordsSpec
     build-depends:
@@ -113,6 +121,7 @@ test-suite trade-leaf-api-test
       , persistent-postgresql
       , servant
       , servant-server
+      , esqueleto
       , time
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N

@@ -30,7 +30,7 @@ instance FromJSON Coords
 instance Sql.PersistField Coords where
     toPersistValue coords = Sql.PersistDbSpecific (BS.pack $ fromCoords coords)
     fromPersistValue (Sql.PersistDbSpecific t) =
-        Right $ (toCoords $ BS.unpack t)
+        Right $ toCoords (BS.unpack t)
     fromPersistValue _ = Left "Coords must be converted from PersistDbSpecific"
 
 instance Sql.PersistFieldSql Coords where

@@ -91,7 +91,7 @@ validateAuthToken token = do
         (verifyToken jwtSecret >>= maybeKeyFromToken)
   where
     (_, tkn) = T.breakOnEnd " " $ decodeUtf8 token
-    verifyToken scrt = verify (secret $ T.pack scrt) =<< (decode tkn)
+    verifyToken scrt = verify (secret $ T.pack scrt) =<< decode tkn
     maybeKeyFromToken scrt = getKeyFromToken (unregisteredClaims (claims scrt))
 
 getKeyFromToken :: Map.Map T.Text Value -> Maybe String
@@ -120,7 +120,7 @@ encodePassword = hashPasswordUsingPolicy fastBcryptHashingPolicy . BS.pack
 authUser :: AuthEntry -> App UserAuth
 authUser authEntry = do
     jwtSecret <- liftIO (getJwtSecret <$> getConfig)
-    maybeUser <- Db.run (selectFirst [UserUsername ==. (T.unpack uName)] [])
+    maybeUser <- Db.run (selectFirst [UserUsername ==. T.unpack uName] [])
     case maybeUser of
         Nothing -> throwError (apiErr (E404, InvalidCredentials))
         Just person
@@ -135,7 +135,7 @@ authUser authEntry = do
     cs =
         def
         { iss = stringOrURI "TradeLeaf"
-        , unregisteredClaims = Map.fromList [("name", String $ uName)]
+        , unregisteredClaims = Map.fromList [("name", String uName)]
         }
     tokenFromSecret scrt = encodeSigned HS256 (secret $ T.pack scrt) cs
 

@@ -65,14 +65,14 @@ encodeJsonError jsonError =
     err = getErrorFromCode $ statusCode jsonError
     jsonBody = encode jsonError
     jsonHeader =
-        ((mk $ pack "Content-Type"), (pack "application/json;charset=utf-8"))
+        (mk $ pack "Content-Type", pack "application/json;charset=utf-8")
 
 jsonFromApiErr :: (StatusCode, ApiErr) -> JsonError
 jsonFromApiErr (stCode, errType) =
     JsonError
-    { statusCode = (tail $ show stCode)
-    , title = (show errType)
-    , detail = (msgFromErr errType)
+    { statusCode = tail $ show stCode
+    , title = show errType
+    , detail = msgFromErr errType
     }
 
 msgFromErr :: ApiErr -> String
@@ -84,7 +84,7 @@ msgFromErr err =
         InvalidOrMissingToken -> "Invalid or missing auth token."
         AuthedUserNotFound ->
             "Could not find user associated with given auth token."
-        UserNotFound userId -> "Could not find user with id of " ++ (show userId)
+        UserNotFound userId -> "Could not find user with id of " ++ show userId
         InvalidCredentials -> "Invalid username or password."
         MissingAuthHeader -> "Missing 'Authorization' header in request."
         RequestedUserNotAuth -> "User requested does not match user associated with provided auth token."
@@ -118,7 +118,7 @@ getDetailFieldFromSqlError :: String -> Maybe String
 getDetailFieldFromSqlError =
     let dropHeaders =  init . dropWhile (/= '(')
     in (dropHeaders <$>) .
-       (sHead . filter (isInfixOf "sqlErrorDetail") . split ",")
+       sHead . filter (isInfixOf "sqlErrorDetail") . split ","
 
 getDataFromDetailField :: String -> Maybe (String, String)
 getDataFromDetailField =
@@ -129,9 +129,9 @@ getDataFromDetailField =
 
 getDetailsFromDetailField :: String -> String
 getDetailsFromDetailField =
-    unwords . drop 1 . reverse . dropWhileEnd (not . elem '=') . reverse . words
+    unwords . drop 1 . reverse . dropWhileEnd (notElem '=') . reverse . words
 
 readableField :: Char -> String -> String
 readableField char acc
-    | elem char ("(=)_" :: String) = acc
+    | char `elem` ("(=)_" :: String) = acc
     | otherwise = char : acc

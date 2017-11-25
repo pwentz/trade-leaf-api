@@ -1,4 +1,4 @@
-module Db.MatchFinderSpec where
+module Queries.MatchSpec where
 
 import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
@@ -7,7 +7,7 @@ import           Data.Time                   (getCurrentTime)
 import           Database.Persist            (get)
 import qualified Database.Persist.Postgresql as Sql
 import qualified Db.Main                     as Db
-import           MatchFinder
+import           Queries.Match
 import           Models.Category
 import           Models.Offer
 import           Models.Photo
@@ -94,7 +94,7 @@ complexDbSetup =
 spec :: Spec
 spec = do
     around setupTeardown $ do
-        describe "MatchFinderSpec" $ do
+        describe "Queries.Match" $ do
             it "can get all offers with requests matching category on user offers" $ \config -> do
               matchDescriptions <- runAppToIO config $ do
                   currUser <- dbSetup
@@ -108,9 +108,3 @@ spec = do
                   mbMatches <- traverse (findUserMatches currUser . Sql.entityVal) mbOffer
                   return $ (fmap . fmap) (offerDescription . Sql.entityVal) mbMatches
               matchDescriptions `shouldBe` (Just ["i will sit baby"])
-            it "can get all users for offers within a given radius" $ \config -> do
-              matchDescriptions <- runAppToIO config $ do
-                  currUser <- complexDbSetup
-                  matches <- findMatchesWithinRadius currUser
-                  return ((offerDescription . Sql.entityVal) <$> matches)
-              matchDescriptions `shouldBe` ["i sand fence", "it is abstract"]
