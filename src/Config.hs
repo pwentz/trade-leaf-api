@@ -82,7 +82,7 @@ connStr :: BS.ByteString -> IO ConnectionString
 connStr sfx =
   let
     buildConnStr user =
-      "host=localhost dbname=trade_leaf" <> sfx <> " user=" <> (BS.pack user) <> " port=5432"
+      "host=localhost dbname=trade_leaf" <> sfx <> " user=" <> BS.pack user <> " port=5432"
   in
     buildConnStr <$> lookupRequired "USER"
 
@@ -91,7 +91,7 @@ getConfig = do
   env  <- lookupSetting "ENV" Development
   pool <- makePool env
   jwtSecret <- lookupRequired "TRADE_LEAF_SECRET"
-  return $ Config { getPool = pool, getEnv = env, getJwtSecret = jwtSecret }
+  return Config { getPool = pool, getEnv = env, getJwtSecret = jwtSecret }
 
 lookupSetting :: Read a => String -> a -> IO a
 lookupSetting env def = do

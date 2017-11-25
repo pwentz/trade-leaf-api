@@ -16,6 +16,7 @@ import           Database.Persist.Sql        (fromSqlKey, get, insert, toSqlKey)
 import           Servant
 
 import           Api.Error                   (ApiErr (..))
+import Api.Offer (OfferResponse(description))
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
 import           Api.User                    (UserMeta (..), UserPatchRequest (UserPatchRequest),
                                               UserRequest (UserRequest),
@@ -109,4 +110,4 @@ spec =
                 (username userMeta) `shouldBe` "pwentz"
                 ((photoImageUrl . entityVal) <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")
                 (coordinates userMeta) `shouldBe` (Just $ Coords 12.345 54.321)
-                ((offerDescription . entityVal) <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]
+                (description <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]

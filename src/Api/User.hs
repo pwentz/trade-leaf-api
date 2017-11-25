@@ -13,6 +13,7 @@ module Api.User where
 import qualified Api.Auth                    as Auth
 import           Api.Error                   (ApiErr (..), StatusCode (..),
                                               apiErr, sqlError)
+import           Api.Offer                   (OfferResponse, getOffers)
 import           Config                      (App (..), Config (..), getConfig)
 import           Control.Applicative         (liftA2)
 import           Control.Monad               (join)
@@ -33,7 +34,6 @@ import           GHC.Generics                (Generic)
 import           Models.Offer
 import           Models.Photo
 import           Models.User
-import           Queries.Offer               (userOffers)
 import           Servant
 
 {-|
@@ -105,7 +105,7 @@ data UserMeta = UserMeta
     , username    :: String
     , photo       :: Maybe (Entity Photo)
     , coordinates :: Maybe Coords
-    , offers      :: [Entity Offer]
+    , offers      :: [OfferResponse]
     } deriving (Show, Generic)
 
 instance ToJSON UserMeta
@@ -131,26 +131,25 @@ createUser userReq@UserRequest {..} =
                 Nothing ->
                     throwError $
                     apiErr
-                        ( E401
-                        , (CustomError
-                               "Password was invalid. Please try another password."))
+                        (E401, CustomError "Password was invalid. Please try another password.")
                 Just pass -> do
                     time <- liftIO getCurrentTime
                     newUser <-
                         Db.runSafe $
                         insert
-                            (User
-                                 firstName
-                                 lastName
-                                 email
-                                 username
-                                 (BS.unpack pass)
-                                 (toSqlKey <$> photoId)
-                                 coordinates
-                                 time
-                                 time)
+                            User
+                              { userFirstName = firstName
+                              , userLastName = lastName
+                              , userEmail = email
+                              , userUsername = username
+                              , userPassword = BS.unpack pass
+                              , userPhotoId = toSqlKey <$> photoId
+                              , userCoordinates = coordinates
+                              , userCreatedAt = time
+                              , userUpdatedAt = time
+                              }
                     either
-                        (throwError . apiErr . ((,) E401) . sqlError)
+                        (throwError . apiErr . (,) E401 . sqlError)
                         (return . fromSqlKey)
                         newUser
 
@@ -177,19 +176,29 @@ patchUser userId UserPatchRequest {..} user = do
     updateUsername name =
         Db.run $ update (toSqlKey userId) [UserUsername =. name]
     updatePhotoId pId =
-        Db.run $ update (toSqlKey userId) [UserPhotoId =. (Just (toSqlKey pId))]
+        Db.run $ update (toSqlKey userId) [UserPhotoId =. Just (toSqlKey pId)]
     updateCoords coords =
-        Db.run $ update (toSqlKey userId) [UserCoordinates =. (Just coords)]
+        Db.run $ update (toSqlKey userId) [UserCoordinates =. Just coords]
 
 getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
     mbUser <- getUser userId
     mbPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< mbUser)
-    offers <- userOffers (toSqlKey userId)
+    offers <- getOffers userId
     case mbUser of
         Nothing -> throwError $ apiErr (E404, UserNotFound userId)
         Just User {..} ->
-          return (UserMeta userId userFirstName userLastName userEmail userUsername (liftA2 Entity userPhotoId mbPhoto) userCoordinates offers)
+          return
+            UserMeta
+              { id = userId
+              , firstName = userFirstName
+              , lastName = userLastName
+              , email = userEmail
+              , username = userUsername
+              , photo = liftA2 Entity userPhotoId mbPhoto
+              , coordinates = userCoordinates
+              , offers = offers
+              }
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
 validateUser userReq@UserRequest {..} = do

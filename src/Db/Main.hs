@@ -31,7 +31,7 @@ run query = do
 runSafe :: SqlPersistT IO a -> App (Either String a)
 runSafe query =
     (do pool <- asks getPool
-        liftIO $ (fmap Right $ runSqlPool query pool)) `catch`
+        liftIO (Right <$> runSqlPool query pool)) `catch`
     defaultFn
   where
     defaultFn (SomeException e) = return (Left $ displayException e)

@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module Api
@@ -10,6 +9,7 @@ import           Api.Auth                         (AuthAPI, authHandler,
                                                    authServer)
 import           Api.User
 import           Api.Photo (PhotoAPI, photoServer)
+import Api.Match (MatchAPI, matchServer)
 import           Config                           (App (..), Config (..))
 import           Control.Category                 ((<<<), (>>>))
 import           Control.Monad.Except
@@ -34,10 +34,14 @@ appToAuthServer cfg = enter (convertApp cfg >>> NT Handler) authServer
 appToPhotoServer :: Config -> Server PhotoAPI
 appToPhotoServer cfg = enter (convertApp cfg >>> NT Handler) photoServer
 
+appToMatchServer :: Config -> Server MatchAPI
+appToMatchServer cfg = enter (convertApp cfg >>> NT Handler) matchServer
+
+
 convertApp :: Config -> App :~> ExceptT ServantErr IO
 convertApp cfg = runReaderTNat cfg <<< NT runApp
 
-type AppAPI = UserAPI :<|> AuthAPI :<|> PhotoAPI
+type AppAPI = UserAPI :<|> AuthAPI :<|> PhotoAPI :<|> MatchAPI
 
 appApi :: Proxy AppAPI
 appApi = Proxy
@@ -50,4 +54,4 @@ app cfg =
     serveWithContext
         appApi
         genAuthServerContext
-        (appToServer cfg :<|> appToAuthServer cfg :<|> appToPhotoServer cfg)
+        (appToServer cfg :<|> appToAuthServer cfg :<|> appToPhotoServer cfg :<|> appToMatchServer cfg)

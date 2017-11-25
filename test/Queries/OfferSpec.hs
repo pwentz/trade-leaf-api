@@ -3,18 +3,19 @@ module Queries.OfferSpec where
 import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Time                   (UTCTime, getCurrentTime)
+import qualified Database.Esqueleto          as E
 import qualified Database.Persist.Postgresql as Sql
-import qualified Database.Esqueleto as E
 import qualified Db.Main                     as Db
-import           Models.Offer
 import           Models.Category
+import           Models.Offer
 import           Models.Photo
-import           Models.User
 import           Models.Request
-import           Queries.Offer               (userOffers, getOfferData)
+import           Models.User
+import           Queries.Offer               (getOfferData, userOffers)
 import           SpecHelper                  (runAppToIO, setupTeardown)
 import           Test.Hspec
 import           Test.QuickCheck
+import           Utils                       (second)
 
 
 defaultUser :: UTCTime -> User
@@ -46,7 +47,7 @@ spec = do
         userOfferDescriptions `shouldBe` ["baby sitter", "circus clown"]
       it "can get the request, category, and photo for a given offer" $ \config -> do
         time <- liftIO getCurrentTime
-        (req, category, photo) <-
+        (user, category, photo) <-
           let
             offer userKey catKey photoKey =
               Offer userKey catKey photoKey "baby sitter" 1 time time
@@ -58,7 +59,7 @@ spec = do
             photoKey <- Db.run $ Sql.insert (Photo Nothing "some-image.jpeg" time time)
             offerKey <- Db.run $ Sql.insert (offer userKey categoryKey photoKey)
             offerReq <- Db.run $ Sql.insert (Request offerKey otherCategoryKey "some request" time time)
-            head <$> getOfferData (Sql.Entity offerKey (offer userKey categoryKey photoKey))
-        (requestDescription $ Sql.entityVal req) `shouldBe` "some request"
+            getOfferData (Sql.Entity offerKey (offer userKey categoryKey photoKey))
+        (userUsername $ Sql.entityVal user) `shouldBe` "pwentz"
         (E.unValue category) `shouldBe` "baby sitter"
         (photoImageUrl $ Sql.entityVal photo) `shouldBe` "some-image.jpeg"

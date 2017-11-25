@@ -47,10 +47,12 @@ library
       , Api.Photo
       , Api.Match
       , Api.Offer
+      , Api.Request
       , Utils
       , Data.Coords
       , Queries.Match
       , Queries.Offer
+      , Queries.Request
       , Models.Photo
       , Models.User
       , Models.Category
@@ -103,8 +105,10 @@ test-suite trade-leaf-api-test
       , Api.UserSpec
       , Api.MatchSpec
       , Api.OfferSpec
+      , Api.RequestSpec
       , Queries.MatchSpec
       , Queries.OfferSpec
+      , Queries.RequestSpec
       , UtilsSpec
       , CoordsSpec
     build-depends:

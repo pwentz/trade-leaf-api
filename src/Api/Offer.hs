@@ -5,72 +5,54 @@
 
 module Api.Offer where
 
-import           Api.Photo                   (PhotoRequest (..))
+import           Api.Request                 (RequestResponse,
+                                              toRequestResponse)
 import           Config                      (App)
 import           Control.Applicative         (liftA2, liftA3)
 import           Control.Monad               (join)
+import           Data.Aeson                  (ToJSON)
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
 import qualified Database.Esqueleto          as E
-import           Database.Persist.Postgresql (Entity, entityKey, entityVal,
+import           Database.Persist.Postgresql (Entity(..), entityKey, entityVal,
                                               fromSqlKey, get, selectFirst,
                                               toSqlKey, (==.))
 import qualified Db.Main                     as Db
+import           GHC.Generics                (Generic)
 import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
 import           Queries.Offer               (getOfferData, userOffers)
+import           Queries.Request             (getOfferRequest)
 import           Utils                       (first, sHead)
-
-data RequestResponse = RequestResponse
-    { id          :: Int64
-    , offerId     :: Int64
-    , category    :: String
-    , description :: String
-    } deriving (Eq, Show)
 
 data OfferResponse = OfferResponse
     { id          :: Int64
     , userId      :: Int64
     , description :: String
     , category    :: String
-    , request     :: RequestResponse
-    , photo       :: PhotoRequest
-    } deriving (Eq, Show)
+    , request     :: Maybe RequestResponse
+    , photo       :: Entity Photo
+    } deriving (Eq, Show, Generic)
+
+instance ToJSON OfferResponse
 
 getOffers :: Int64 -> App [OfferResponse]
-getOffers userId = do
-    offers <- userOffers (toSqlKey userId)
-    offerResponses <- sequence <$> traverse toOfferResponse offers
-    return (fromMaybe [] offerResponses)
+getOffers userId =
+    traverse toOfferResponse =<< userOffers (toSqlKey userId)
 
-toRequestResponse :: Entity Request -> App (Maybe RequestResponse)
-toRequestResponse req = do
-    reqCat <-
-        (categoryName <$>) <$>
-        ((Db.run . get . requestCategoryId . entityVal) req)
-    case reqCat of
-        Nothing -> return Nothing
-        Just catNm ->
-            (return . return) $
-            RequestResponse
-                (fromSqlKey $ entityKey req)
-                ((fromSqlKey . requestOfferId . entityVal) req)
-                catNm
-                (requestDescription $ entityVal req)
-
-toOfferResponse :: Entity Offer -> App (Maybe OfferResponse)
-toOfferResponse offer =
-    let mkPhotoRes = liftA2 PhotoRequest photoCloudinaryId photoImageUrl
-        mkOfferRes (_, catNm, photo) reqRes =
+toOfferResponse :: Entity Offer -> App OfferResponse
+toOfferResponse offer@(Entity offerKey offerVal) =
+    let mkOfferRes reqRes (_, catNm, photo) =
             OfferResponse
-                (fromSqlKey $ entityKey offer)
-                ((fromSqlKey . offerUserId . entityVal) offer)
-                (offerDescription $ entityVal offer)
-                (E.unValue catNm)
-                reqRes
-                (mkPhotoRes $ entityVal photo)
-    in do mbData <- sHead <$> getOfferData offer
-          reqRes <- join <$> traverse toRequestResponse (first <$> mbData)
-          return (liftA2 mkOfferRes mbData reqRes)
+                { id = fromSqlKey offerKey
+                , userId = fromSqlKey (offerUserId offerVal)
+                , description = offerDescription offerVal
+                , category = E.unValue catNm
+                , request = reqRes
+                , photo = photo
+                }
+    in do mbData <- getOfferData offer
+          reqRes <- join <$> (traverse toRequestResponse =<< getOfferRequest offerKey)
+          return (mkOfferRes reqRes mbData)
