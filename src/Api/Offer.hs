@@ -14,9 +14,7 @@ import           Data.Aeson                  (ToJSON)
 import           Data.Int                    (Int64)
 import           Data.Maybe                  (fromMaybe)
 import qualified Database.Esqueleto          as E
-import           Database.Persist.Postgresql (Entity(..), entityKey, entityVal,
-                                              fromSqlKey, get, selectFirst,
-                                              toSqlKey, (==.))
+import           Database.Persist.Postgresql
 import qualified Db.Main                     as Db
 import           GHC.Generics                (Generic)
 import           Models.Category
