@@ -60,9 +60,9 @@ dbSetup =
     return (currentUser time)
 
 spec :: Spec
-spec = do
-  around setupTeardown $ do
-    describe "Api.Matches" $ do
+spec =
+  around setupTeardown $
+    describe "Api.Matches" $
       it "can get all users for offers within a given radius" $ \config -> do
         matches <- runAppToIO config $ do
             currUser <- dbSetup

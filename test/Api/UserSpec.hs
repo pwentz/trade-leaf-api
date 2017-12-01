@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module Api.UserSpec where
@@ -58,7 +57,7 @@ photoReq = PhotoRequest Nothing "https://google.com/clown.png"
 
 spec :: Spec
 spec =
-    around setupTeardown $ do
+    around setupTeardown $
         describe "User" $ do
             it "createUser creates a new user from a request" $ \config -> do
                 dbUser <-
@@ -66,12 +65,12 @@ spec =
                         userId <- createUser defaultReq
                         mbUser <- getUser userId
                         return (userUsername <$> mbUser)
-                dbUser `shouldBe` (Just "username")
+                dbUser `shouldBe` Just "username"
             it "does not create user if password is too short" $ \config ->
                   let
                     badReq =
                       UserRequest "pat" "wentz" "pat@gmail.com" "pwentz" "pass" Nothing Nothing
-                  in do
+                  in
                     runAppToIO config (createUser badReq) `shouldThrow` anyException
             it "updates a user's photo and coordinates" $ \config -> do
                 (patchedUser, photo) <-
@@ -91,12 +90,12 @@ spec =
                            updatedUser <- getUser userId
                            userPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< updatedUser)
                            return (updatedUser, userPhoto)
-                (userFirstName <$> patchedUser) `shouldBe` (Just "not pat")
-                (userLastName <$> patchedUser) `shouldBe` (Just "not wentz")
-                (userEmail <$> patchedUser) `shouldBe` (Just "pwentz@yahoo.com")
-                (userUsername <$> patchedUser) `shouldBe` (Just "username")
+                (userFirstName <$> patchedUser) `shouldBe` Just "not pat"
+                (userLastName <$> patchedUser) `shouldBe` Just "not wentz"
+                (userEmail <$> patchedUser) `shouldBe` Just "pwentz@yahoo.com"
+                (userUsername <$> patchedUser) `shouldBe` Just "username"
                 (userCoordinates =<< patchedUser) `shouldBe` (Just $ Coords 12.34 56.789)
-                (photoImageUrl <$> photo) `shouldBe` (Just "https://google.com/clown.png")
+                (photoImageUrl <$> photo) `shouldBe` Just "https://google.com/clown.png"
             it "gets a user's data with records related to user fields" $ \config -> do
                 time <- liftIO getCurrentTime
                 userMeta <-
@@ -107,7 +106,7 @@ spec =
                         userOfferId1 <- Db.run $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "babysitting" 5 time time)
                         userOfferId2 <- Db.run $ insert (Offer (toSqlKey userId) categoryId (toSqlKey photoId) "carpentry" 5 time time)
                         getUserMeta userId
-                (username userMeta) `shouldBe` "pwentz"
-                ((photoImageUrl . entityVal) <$> (photo userMeta)) `shouldBe` (Just "https://google.com/clown.png")
-                (coordinates userMeta) `shouldBe` (Just $ Coords 12.345 54.321)
-                (description <$> (offers userMeta)) `shouldBe` ["babysitting", "carpentry"]
+                username userMeta `shouldBe` "pwentz"
+                ((photoImageUrl . entityVal) <$> photo userMeta) `shouldBe` Just "https://google.com/clown.png"
+                coordinates userMeta `shouldBe` (Just $ Coords 12.345 54.321)
+                (description <$> offers userMeta) `shouldBe` ["babysitting", "carpentry"]

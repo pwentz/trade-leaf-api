@@ -26,13 +26,13 @@ setupTeardown runTestsWith = do
     pool <- makePool Test
     migrateDb pool
     cleanDb pool
-    runTestsWith $ Config { getPool = pool
-                          , getEnv = Test
-                          , getJwtSecret = "trade-leaf-secret" }
+    runTestsWith Config { getPool = pool
+                        , getEnv = Test
+                        , getJwtSecret = "trade-leaf-secret" }
     cleanDb pool
   where
     migrateDb :: ConnectionPool -> IO ()
-    migrateDb pool = runSqlPool Db.doMigrations pool
+    migrateDb = runSqlPool Db.doMigrations
     cleanDb :: ConnectionPool -> IO ()
     cleanDb pool = do
         runSqlPool (deleteWhere ([] :: [Filter Request])) pool

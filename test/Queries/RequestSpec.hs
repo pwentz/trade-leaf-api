@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Queries.RequestSpec where
 
 import qualified Database.Persist.Postgresql as Pg
@@ -22,9 +20,9 @@ defaultUser time =
 
 
 spec :: Spec
-spec = do
-  around setupTeardown $ do
-    describe "Queries.Request" $ do
+spec =
+  around setupTeardown $
+    describe "Queries.Request" $
       it "can get the request for a given offer" $ \config -> do
         time <- liftIO getCurrentTime
         reqRes <- runAppToIO config $ do

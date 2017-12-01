@@ -24,8 +24,8 @@ defaultUser time =
 
 
 spec :: Spec
-spec = do
-  around setupTeardown $ do
+spec =
+  around setupTeardown $
     describe "Queries.Offer" $ do
       it "can get all offers for a given user" $ \config -> do
         time <- liftIO getCurrentTime
@@ -60,6 +60,6 @@ spec = do
             offerKey <- Db.run $ Sql.insert (offer userKey categoryKey photoKey)
             offerReq <- Db.run $ Sql.insert (Request offerKey otherCategoryKey "some request" time time)
             getOfferData (Sql.Entity offerKey (offer userKey categoryKey photoKey))
-        (userUsername $ Sql.entityVal user) `shouldBe` "pwentz"
-        (E.unValue category) `shouldBe` "baby sitter"
-        (photoImageUrl $ Sql.entityVal photo) `shouldBe` "some-image.jpeg"
+        userUsername (Sql.entityVal user) `shouldBe` "pwentz"
+        E.unValue category `shouldBe` "baby sitter"
+        photoImageUrl (Sql.entityVal photo) `shouldBe` "some-image.jpeg"

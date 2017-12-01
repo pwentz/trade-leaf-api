@@ -23,8 +23,8 @@ defaultUser time =
 
 spec :: Spec
 spec =
-  around setupTeardown $ do
-    describe "Api.Request" $ do
+  around setupTeardown $
+    describe "Api.Request" $
       it "toRequestResponse" $ \config ->
         let
           expectedReq reqKey offerKey =
@@ -42,7 +42,7 @@ spec =
             categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
             offerKey <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
             reqKey <- Db.run $ Pg.insert (Request offerKey categoryKey "chemistry" time time)
-            mbSampleReq <- (Pg.Entity reqKey <$>) <$> (Db.run (Pg.get reqKey))
+            mbSampleReq <- (Pg.Entity reqKey <$>) <$> Db.run (Pg.get reqKey)
             reqResponse <- join <$> traverse toRequestResponse mbSampleReq
             return (reqResponse, expectedReq reqKey offerKey)
         reqRes `shouldBe` Just expected
