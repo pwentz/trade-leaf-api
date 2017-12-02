@@ -25,7 +25,7 @@ instance FromJSON PhotoRequest
 instance ToJSON PhotoRequest
 
 type PhotoAPI
-    = "photos" :> ReqBody '[ JSON] PhotoRequest :> Post '[ JSON] Int64
+    = "photos" :> ReqBody '[JSON] PhotoRequest :> Post '[JSON] Int64
 
 photoServer :: ServerT PhotoAPI App
 photoServer = createPhoto

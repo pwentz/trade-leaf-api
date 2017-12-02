@@ -1,0 +1,14 @@
+Description: Creates Trade table.
+Created: 2017-12-02 00:44:39.46979 UTC
+Depends: create-offer
+Apply: |
+  CREATE TABLE "trade" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "offer1_id" INT8 REFERENCES "offer" NOT NULL,
+    "offer2_id" INT8 REFERENCES "offer" NOT NULL,
+    "is_open" BOOL NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "trade";

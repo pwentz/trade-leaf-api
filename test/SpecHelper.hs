@@ -14,6 +14,7 @@ import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
+import           Models.Trade
 import           Models.User
 
 runAppToIO :: Config -> App a -> IO a
@@ -36,6 +37,7 @@ setupTeardown runTestsWith = do
     cleanDb :: ConnectionPool -> IO ()
     cleanDb pool = do
         runSqlPool (deleteWhere ([] :: [Filter Request])) pool
+        runSqlPool (deleteWhere ([] :: [Filter Trade])) pool
         runSqlPool (deleteWhere ([] :: [Filter Offer])) pool
         runSqlPool (deleteWhere ([] :: [Filter Category])) pool
         runSqlPool (deleteWhere ([] :: [Filter User])) pool

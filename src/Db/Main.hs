@@ -13,6 +13,7 @@ import qualified Models.Category      as Category
 import qualified Models.Offer         as Offer
 import qualified Models.Photo         as Photo
 import qualified Models.Request       as Request
+import qualified Models.Trade         as Trade
 import qualified Models.User          as User
 
 doMigrations :: SqlPersistT IO ()
@@ -22,6 +23,7 @@ doMigrations = do
     runMigration User.migrateAll
     runMigration Offer.migrateAll
     runMigration Request.migrateAll
+    runMigration Trade.migrateAll
 
 run :: (MonadReader Config m, MonadIO m) => SqlPersistT IO b -> m b
 run query = do

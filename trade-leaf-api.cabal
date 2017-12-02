@@ -48,6 +48,7 @@ library
       , Api.Match
       , Api.Offer
       , Api.Request
+      , Api.Trade
       , Utils
       , Data.Coords
       , Queries.Match
@@ -58,6 +59,7 @@ library
       , Models.Category
       , Models.Offer
       , Models.Request
+      , Models.Trade
       , Db.Main
     build-depends:
         base >= 4.7 && < 5
@@ -105,6 +107,7 @@ test-suite trade-leaf-api-test
       , Api.UserSpec
       , Api.MatchSpec
       , Api.OfferSpec
+      , Api.TradeSpec
       , Api.RequestSpec
       , Queries.MatchSpec
       , Queries.OfferSpec

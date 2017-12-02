@@ -35,6 +35,7 @@ dbSetup =
     currUserKey <- Db.run $ Sql.insert (currentUser time)
     currUserOffer1 <- Db.run $ Sql.insert (Offer currUserKey artCatKey photoId "i offer painting" 999 time time)
     currUserOffer2 <- Db.run $ Sql.insert (Offer currUserKey babysitCatKey photoId "i will sit baby" 15 time time)
+    currUserOffer3 <- Db.run $ Sql.insert (Offer currUserKey handyCatKey photoId "i handy" 15 time time)
     _ <- Db.run $ Sql.insert (Request currUserOffer1 handyCatKey "sand fence plz" time time)
     _ <- Db.run $ Sql.insert (Request currUserOffer2 artCatKey "i need painting" time time)
     {-| 6 miles from currentUser -}
@@ -70,3 +71,4 @@ spec =
         ((description . offer) <$> matches) `shouldContain` ["i sand fence", "it is abstract"]
         (distance <$> matches) `shouldBe` [6, 9]
         ((username . user) <$> matches) `shouldBe` ["ottop", "philQ"]
+        (((description <$>) . exchangeOffers) <$> matches) `shouldContain` [["i offer painting"], ["i will sit baby"]]
