@@ -5,10 +5,10 @@ import Test.Hspec
 import Test.QuickCheck
 
 spec :: Spec
-spec = do
-    describe "ErrorSpec" $ do
-        it "can take stringified SqlError and extract the details" $ do
-            (parseSqlError sqlError) `shouldBe` (expected :: String)
+spec =
+    describe "ErrorSpec" $
+        it "can take stringified SqlError and extract the details" $
+            parseSqlError sqlError `shouldBe` (expected :: String)
   where
     expected =
         mconcat ["The username", " \"", "hamilton", "\" ", "already exists."]

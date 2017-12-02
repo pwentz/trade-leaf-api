@@ -14,6 +14,7 @@ import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
+import           Models.Trade
 import           Models.User
 
 runAppToIO :: Config -> App a -> IO a
@@ -26,16 +27,17 @@ setupTeardown runTestsWith = do
     pool <- makePool Test
     migrateDb pool
     cleanDb pool
-    runTestsWith $ Config { getPool = pool
-                          , getEnv = Test
-                          , getJwtSecret = "trade-leaf-secret" }
+    runTestsWith Config { getPool = pool
+                        , getEnv = Test
+                        , getJwtSecret = "trade-leaf-secret" }
     cleanDb pool
   where
     migrateDb :: ConnectionPool -> IO ()
-    migrateDb pool = runSqlPool Db.doMigrations pool
+    migrateDb = runSqlPool Db.doMigrations
     cleanDb :: ConnectionPool -> IO ()
     cleanDb pool = do
         runSqlPool (deleteWhere ([] :: [Filter Request])) pool
+        runSqlPool (deleteWhere ([] :: [Filter Trade])) pool
         runSqlPool (deleteWhere ([] :: [Filter Offer])) pool
         runSqlPool (deleteWhere ([] :: [Filter Category])) pool
         runSqlPool (deleteWhere ([] :: [Filter User])) pool

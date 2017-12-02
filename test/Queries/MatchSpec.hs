@@ -92,8 +92,8 @@ complexDbSetup =
     return (currentUser time)
 
 spec :: Spec
-spec = do
-    around setupTeardown $ do
+spec =
+    around setupTeardown $
         describe "Queries.Match" $ do
             it "can get all offers with requests matching category on user offers" $ \config -> do
               matchDescriptions <- runAppToIO config $ do
@@ -107,4 +107,4 @@ spec = do
                   mbOffer <- Db.run $ Sql.selectFirst [OfferDescription Sql.==. "warhol"] []
                   mbMatches <- traverse (findUserMatches currUser . Sql.entityVal) mbOffer
                   return $ (fmap . fmap) (offerDescription . Sql.entityVal) mbMatches
-              matchDescriptions `shouldBe` (Just ["i will sit baby"])
+              matchDescriptions `shouldBe` Just ["i will sit baby"]

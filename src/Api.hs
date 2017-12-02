@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Api
     ( app
@@ -7,9 +7,10 @@ module Api
 
 import           Api.Auth                         (AuthAPI, authHandler,
                                                    authServer)
+import           Api.Match                        (MatchAPI, matchServer)
+import           Api.Photo                        (PhotoAPI, photoServer)
+import           Api.Trade                        (TradeAPI, tradeServer)
 import           Api.User
-import           Api.Photo (PhotoAPI, photoServer)
-import Api.Match (MatchAPI, matchServer)
 import           Config                           (App (..), Config (..))
 import           Control.Category                 ((<<<), (>>>))
 import           Control.Monad.Except
@@ -37,11 +38,13 @@ appToPhotoServer cfg = enter (convertApp cfg >>> NT Handler) photoServer
 appToMatchServer :: Config -> Server MatchAPI
 appToMatchServer cfg = enter (convertApp cfg >>> NT Handler) matchServer
 
+appToTradeServer :: Config -> Server TradeAPI
+appToTradeServer cfg = enter (convertApp cfg >>> NT Handler) tradeServer
 
 convertApp :: Config -> App :~> ExceptT ServantErr IO
 convertApp cfg = runReaderTNat cfg <<< NT runApp
 
-type AppAPI = UserAPI :<|> AuthAPI :<|> PhotoAPI :<|> MatchAPI
+type AppAPI = UserAPI :<|> AuthAPI :<|> PhotoAPI :<|> MatchAPI :<|> TradeAPI
 
 appApi :: Proxy AppAPI
 appApi = Proxy
@@ -54,4 +57,9 @@ app cfg =
     serveWithContext
         appApi
         genAuthServerContext
-        (appToServer cfg :<|> appToAuthServer cfg :<|> appToPhotoServer cfg :<|> appToMatchServer cfg)
+        (appToServer cfg
+        :<|> appToAuthServer cfg
+        :<|> appToPhotoServer cfg
+        :<|> appToMatchServer cfg
+        :<|> appToTradeServer cfg
+        )

@@ -108,15 +108,15 @@ offer2Res userKey offerKey photoKey req2Key time =
       }
 
 spec :: Spec
-spec = do
-  around setupTeardown $ do
+spec =
+  around setupTeardown $
     describe "Api.Offer" $ do
       it "can convert an offer into an offer response" $ \config -> do
         time <- liftIO getCurrentTime
         DbSetup {..} <- runAppToIO config dbSetup
         offerRes <- runAppToIO config $ do
           mbOffer <- Db.run (Pg.get offer1Key)
-          traverse toOfferResponse ((Pg.Entity offer1Key) <$> mbOffer)
+          traverse toOfferResponse (Pg.Entity offer1Key <$> mbOffer)
         offerRes `shouldBe` Just (offer1Res userKey offer1Key photo1Key req1Key time)
       it "can get offer response data for a given user" $ \config -> do
         time <- liftIO getCurrentTime
