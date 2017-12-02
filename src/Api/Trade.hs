@@ -16,6 +16,7 @@ import qualified Database.Persist.Postgresql as Pg
 import qualified Db.Main                     as Db
 import           GHC.Generics                (Generic)
 import           Models.Trade
+import           Queries.Trade               (findFromOffers)
 import           Servant
 
 data TradeRequest = TradeRequest
@@ -26,11 +27,24 @@ data TradeRequest = TradeRequest
 instance FromJSON TradeRequest
 
 type TradeAPI
-     = "trades" :> ReqBody '[JSON] TradeRequest :> Post '[JSON] Int64
-      :<|> "trades" :> Capture "id" Int64 :> "close" :> Put '[JSON] ()
+    = "trades" :> ReqBody '[JSON] TradeRequest :> Post '[JSON] (Pg.Entity Trade)
 
 tradeServer :: ServerT TradeAPI App
-tradeServer = createTrade :<|> closeTrade
+tradeServer = closeOrCreate
+
+closeOrCreate :: TradeRequest -> App (Pg.Entity Trade)
+closeOrCreate tradeReq@TradeRequest {..} = do
+    existingTrade <- findFromOffers (Pg.toSqlKey offer1Id) (Pg.toSqlKey offer2Id)
+    case existingTrade of
+        Nothing -> do
+            tradeId <- createTrade tradeReq
+            mbTrade <- Db.run $ (Pg.get . Pg.toSqlKey) tradeId
+            maybe
+                (throwError $ apiErr (E500, CustomError "Something went wrong!"))
+                (return . Pg.Entity (Pg.toSqlKey tradeId))
+                mbTrade
+        Just trade@Pg.Entity {..} ->
+            closeTrade (Pg.fromSqlKey entityKey) >> return trade
 
 createTrade :: TradeRequest -> App Int64
 createTrade TradeRequest {..} = do

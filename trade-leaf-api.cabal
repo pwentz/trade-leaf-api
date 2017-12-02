@@ -54,6 +54,7 @@ library
       , Queries.Match
       , Queries.Offer
       , Queries.Request
+      , Queries.Trade
       , Models.Photo
       , Models.User
       , Models.Category
@@ -112,6 +113,7 @@ test-suite trade-leaf-api-test
       , Queries.MatchSpec
       , Queries.OfferSpec
       , Queries.RequestSpec
+      , Queries.TradeSpec
       , UtilsSpec
       , CoordsSpec
     build-depends:

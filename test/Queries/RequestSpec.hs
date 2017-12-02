@@ -1,18 +1,18 @@
 module Queries.RequestSpec where
 
+import           Control.Monad.IO.Class      (liftIO)
+import           Data.Time                   (UTCTime, getCurrentTime)
 import qualified Database.Persist.Postgresql as Pg
-import qualified Db.Main as Db
-import Control.Monad.IO.Class (liftIO)
-import SpecHelper (runAppToIO, setupTeardown)
-import Models.Request
-import Models.Offer
-import Models.User
-import Models.Photo
-import Models.Category
-import Queries.Request
-import Data.Time (getCurrentTime, UTCTime)
-import Test.Hspec
-import Test.QuickCheck
+import qualified Db.Main                     as Db
+import           Models.Category
+import           Models.Offer
+import           Models.Photo
+import           Models.Request
+import           Models.User
+import           Queries.Request
+import           SpecHelper                  (runAppToIO, setupTeardown)
+import           Test.Hspec
+import           Test.QuickCheck
 
 defaultUser :: UTCTime -> User
 defaultUser time =
