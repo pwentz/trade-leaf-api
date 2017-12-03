@@ -61,3 +61,19 @@ spec =
           foundTrades <- findAccepted acceptedOfferKey
           return (Pg.entityKey <$> foundTrades, [trade1Key, trade3Key])
         foundTrades `shouldBe` expectedTrades
+      it "findExchange" $ \config -> do
+        (foundTrades, expectedTrades) <- runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
+          categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
+          userKey <- Db.run $ Pg.insert (defaultUser time)
+          exchangeOfferKey <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
+          acceptedOffer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "calculus" 1 time time)
+          acceptedOffer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
+          acceptedOffer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
+          trade1Key <- Db.run $ Pg.insert (Trade acceptedOffer3Key acceptedOffer1Key True time time)
+          trade2Key <- Db.run $ Pg.insert (Trade acceptedOffer2Key exchangeOfferKey True time time)
+          trade3Key <- Db.run $ Pg.insert (Trade acceptedOffer3Key exchangeOfferKey True time time)
+          foundTrades <- findExchange exchangeOfferKey
+          return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
+        foundTrades `shouldBe` expectedTrades

@@ -31,3 +31,12 @@ findAccepted offerKey =
         on (trades ^. TradeAcceptedOfferId ==. offers ^. OfferId)
         where_ (trades ^. TradeAcceptedOfferId ==. val offerKey)
         return trades
+
+findExchange :: Pg.Key Offer -> App [Pg.Entity Trade]
+findExchange offerKey =
+    Db.run $
+    select $
+    from $ \(trades `InnerJoin` offers) -> do
+        on (trades ^. TradeExchangeOfferId ==. offers ^. OfferId)
+        where_ (trades ^. TradeExchangeOfferId ==. val offerKey)
+        return trades

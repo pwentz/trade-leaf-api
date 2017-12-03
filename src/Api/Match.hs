@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Api.Match where
 
-import           Api.Offer            (OfferResponse, toOfferResponse)
+import           Api.Offer            (OfferResponse (id), toOfferResponse)
 import           Api.User             (UserMeta (..), getUserMeta)
 import           Config               (App)
 import           Control.Applicative  (liftA2)
@@ -17,15 +18,23 @@ import           Models.Offer
 import           Models.Trade
 import           Models.User
 import           Queries.Match
-import           Queries.Trade        (findAccepted)
+import           Queries.Trade        (findAccepted, findExchange)
 import           Servant
+import           Utils
+
+data ExchangeOffer = ExchangeOffer
+    { offer      :: OfferResponse
+    , isAccepted :: Bool
+    } deriving (Show, Generic)
 
 data MatchResponse = MatchResponse
     { offer          :: OfferResponse
     , user           :: UserMeta
-    , exchangeOffers :: [OfferResponse]
+    , exchangeOffers :: [ExchangeOffer]
     , distance       :: Int
     } deriving (Show, Generic)
+
+instance ToJSON ExchangeOffer
 
 instance ToJSON MatchResponse
 
@@ -51,25 +60,55 @@ findWithinRadius currentUser = foldr foldMatches (return [])
         let distance = distanceBetweenUsers currentUser (Sql.entityVal user)
             isWithinDistance offerEntity =
                 distance <= offerRadius (Sql.entityVal offerEntity)
-        in do currentUserMatches <- findUserMatches currentUser (Sql.entityVal offer)
+        in do currentUserMatches <-
+                  findUserMatches currentUser (Sql.entityVal offer)
               userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user)
-              hasOfferBeenAccepted <- hasAcceptedOffer offer currentUserMatches
-              if isWithinDistance offer && any isWithinDistance currentUserMatches && not hasOfferBeenAccepted
+              hasOfferBeenAccepted <- containsExchangeOffer offer currentUserMatches
+              acceptedUserOfferTrade <- findAcceptedTrade offer currentUserMatches
+              if isWithinDistance offer &&
+                 any isWithinDistance currentUserMatches &&
+                 not hasOfferBeenAccepted &&
+                 not (isAcceptedUserTradeMutual acceptedUserOfferTrade)
                   then do
                       offerRes <- toOfferResponse offer
-                      -- if any of exchangeOffers are an `approvedOffer` on match/trade record
-                      -- where offer is other offer AND trade is still open, then move those to front
-                      -- (default is to append others to back)
-                      exchangeOffers <-
-                          traverse toOfferResponse currentUserMatches
-                      (MatchResponse
-                       { offer = offerRes
-                       , user = userMeta
-                       , exchangeOffers = exchangeOffers
-                       , distance = round distance
-                       } :) <$>
-                          acc
+                      exchangeOffers <- traverse toOfferResponse currentUserMatches
+                      case acceptedUserOfferTrade of
+                          Nothing ->
+                              (++ [ MatchResponse
+                                    { offer = offerRes
+                                    , user = userMeta
+                                    , exchangeOffers =
+                                          flip ExchangeOffer False <$>
+                                          exchangeOffers
+                                    , distance = round distance
+                                    }
+                                  ]) <$> acc
+                          Just trade ->
+                              (MatchResponse
+                               { offer = offerRes
+                               , user = userMeta
+                               , exchangeOffers =
+                                     acceptedExchangeOffer trade exchangeOffers
+                               , distance = round distance
+                               } :) <$> acc
                   else acc
+    isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> Bool
+    isAcceptedUserTradeMutual =
+        fromMaybe False . ((tradeIsMutual . Sql.entityVal) <$>)
+    acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
+    acceptedExchangeOffer acceptedTrade =
+      let
+        acceptedOfferKey =
+          Sql.fromSqlKey . tradeAcceptedOfferId . Sql.entityVal
+      in
+        foldr
+            (\offerRes acc ->
+                 ExchangeOffer
+                 { offer = offerRes
+                 , isAccepted =
+                       Api.Offer.id offerRes == acceptedOfferKey acceptedTrade
+                 } : acc)
+            []
 
 {-| Find all trades where given offer is approved offer, go through them and
     see if any potential matches (comparing offers) match the other offer on the
@@ -78,8 +117,8 @@ findWithinRadius currentUser = foldr foldMatches (return [])
     ie. check to see if given offer has already been accepted in exchange
     for any of other offers
 |-}
-hasAcceptedOffer :: Sql.Entity Offer -> [Sql.Entity Offer] -> App Bool
-hasAcceptedOffer targetOffer comparingOffers = do
+containsExchangeOffer :: Sql.Entity Offer -> [Sql.Entity Offer] -> App Bool
+containsExchangeOffer targetOffer comparingOffers = do
     acceptedOfferTrades <- findAccepted (Sql.entityKey targetOffer)
     return (any containsExchangeOffer acceptedOfferTrades)
   where
@@ -88,3 +127,17 @@ hasAcceptedOffer targetOffer comparingOffers = do
     isExchangeOffer offerTrade comparingOffer =
         Sql.entityKey comparingOffer ==
         tradeExchangeOfferId (Sql.entityVal offerTrade)
+
+{-| Find trade where accepted offer is within given list of offers AND
+    the given offer is the exchange offer.
+|-}
+findAcceptedTrade :: Sql.Entity Offer -> [Sql.Entity Offer] -> App (Maybe (Sql.Entity Trade))
+findAcceptedTrade targetOffer matchingOffers = do
+    exchangeOfferTrades <- findExchange (Sql.entityKey targetOffer)
+    return (sHead $ filter containsAcceptedOffer exchangeOfferTrades)
+  where
+    containsAcceptedOffer exchangeTrade =
+        any (isAcceptedOffer exchangeTrade) matchingOffers
+    isAcceptedOffer trade comparingOffer =
+        Sql.entityKey comparingOffer ==
+        tradeAcceptedOfferId (Sql.entityVal trade)
