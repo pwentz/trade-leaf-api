@@ -14,8 +14,10 @@ import           Data.Maybe           (fromMaybe)
 import qualified Database.Persist.Sql as Sql
 import           GHC.Generics         (Generic)
 import           Models.Offer
+import           Models.Trade
 import           Models.User
 import           Queries.Match
+import           Queries.Trade        (findAccepted)
 import           Servant
 
 data MatchResponse = MatchResponse
@@ -51,14 +53,38 @@ findWithinRadius currentUser = foldr foldMatches (return [])
                 distance <= offerRadius (Sql.entityVal offerEntity)
         in do currentUserMatches <- findUserMatches currentUser (Sql.entityVal offer)
               userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user)
-              if isWithinDistance offer && any isWithinDistance currentUserMatches
+              hasOfferBeenAccepted <- hasAcceptedOffer offer currentUserMatches
+              if isWithinDistance offer && any isWithinDistance currentUserMatches && not hasOfferBeenAccepted
                   then do
                       offerRes <- toOfferResponse offer
-                      exchangeOffers <- traverse toOfferResponse currentUserMatches
+                      -- if any of exchangeOffers are an `approvedOffer` on match/trade record
+                      -- where offer is other offer AND trade is still open, then move those to front
+                      -- (default is to append others to back)
+                      exchangeOffers <-
+                          traverse toOfferResponse currentUserMatches
                       (MatchResponse
                        { offer = offerRes
                        , user = userMeta
                        , exchangeOffers = exchangeOffers
                        , distance = round distance
-                       } :) <$> acc
+                       } :) <$>
+                          acc
                   else acc
+
+{-| Find all trades where given offer is approved offer, go through them and
+    see if any potential matches (comparing offers) match the other offer on the
+    trade
+
+    ie. check to see if given offer has already been accepted in exchange
+    for any of other offers
+|-}
+hasAcceptedOffer :: Sql.Entity Offer -> [Sql.Entity Offer] -> App Bool
+hasAcceptedOffer targetOffer comparingOffers = do
+    acceptedOfferTrades <- findAccepted (Sql.entityKey targetOffer)
+    return (any containsExchangeOffer acceptedOfferTrades)
+  where
+    containsExchangeOffer approvedOfferTrade =
+        any (isExchangeOffer approvedOfferTrade) comparingOffers
+    isExchangeOffer offerTrade comparingOffer =
+        Sql.entityKey comparingOffer ==
+        tradeExchangeOfferId (Sql.entityVal offerTrade)

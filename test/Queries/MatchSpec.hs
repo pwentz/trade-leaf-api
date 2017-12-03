@@ -101,6 +101,7 @@ spec =
                   offers <- findMatches currUser
                   return ((offerDescription . Sql.entityVal) <$> offers)
               matchDescriptions `shouldBe` ["i sand fence", "i've sanded once"]
+              length matchDescriptions `shouldBe` 2
             it "can find a user's matching offers by offer" $ \config -> do
               matchDescriptions <- runAppToIO config $ do
                   currUser <- complexDbSetup

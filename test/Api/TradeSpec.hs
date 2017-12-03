@@ -39,8 +39,8 @@ spec =
         let
           tradeReq offer1Key offer2Key =
             TradeRequest
-              { offer1Id = Pg.fromSqlKey offer1Key
-              , offer2Id = Pg.fromSqlKey offer2Key
+              { acceptedOfferId = Pg.fromSqlKey offer1Key
+              , exchangeOfferId = Pg.fromSqlKey offer2Key
               }
         in do
         tradeCount <- runAppToIO config $ do
@@ -53,7 +53,7 @@ spec =
           _ <- createTrade (tradeReq offer1Key offer2Key)
           Db.run $ Pg.count ([] :: [Pg.Filter Trade])
         tradeCount `shouldBe` 1
-      it "closeTrade" $ \config -> do
+      it "makeMutual" $ \config -> do
         mbTrade <- runAppToIO config $ do
           time <- liftIO getCurrentTime
           photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
@@ -62,16 +62,16 @@ spec =
           offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
           offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
           tradeKey <- Db.run $ Pg.insert (Trade offer1Key offer2Key True time time)
-          _ <- closeTrade (Pg.fromSqlKey tradeKey)
+          _ <- makeMutual (Pg.fromSqlKey tradeKey)
           Db.run (Pg.get tradeKey)
-        (tradeIsOpen <$> mbTrade) `shouldBe` Just False
+        (tradeIsMutual <$> mbTrade) `shouldBe` Just False
       context "closeOrCreate" $ do
         it "creates a trade if one does not already exist" $ \config ->
           let
             tradeReq offer1Key offer2Key =
               TradeRequest
-                { offer1Id = Pg.fromSqlKey offer1Key
-                , offer2Id = Pg.fromSqlKey offer2Key
+                { acceptedOfferId = Pg.fromSqlKey offer1Key
+                , exchangeOfferId = Pg.fromSqlKey offer2Key
                 }
           in do
           tradeCount <- runAppToIO config $ do
@@ -88,8 +88,8 @@ spec =
           let
             tradeReq offer1Key offer2Key =
               TradeRequest
-                { offer1Id = Pg.fromSqlKey offer1Key
-                , offer2Id = Pg.fromSqlKey offer2Key
+                { acceptedOfferId = Pg.fromSqlKey offer1Key
+                , exchangeOfferId = Pg.fromSqlKey offer2Key
                 }
           in do
           (trade, tradeCount) <- runAppToIO config $ do
@@ -104,5 +104,5 @@ spec =
             mbTrade <- Db.run $ Pg.get tradeKey
             tradeCount <- Db.run $ Pg.count ([] :: [Pg.Filter Trade])
             return (mbTrade, tradeCount)
-          (tradeIsOpen <$> trade) `shouldBe` Just False
+          (tradeIsMutual <$> trade) `shouldBe` Just False
           tradeCount `shouldBe` 1

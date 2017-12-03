@@ -4,9 +4,9 @@ Depends: create-offer
 Apply: |
   CREATE TABLE "trade" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
-    "offer1_id" INT8 REFERENCES "offer" NOT NULL,
-    "offer2_id" INT8 REFERENCES "offer" NOT NULL,
-    "is_open" BOOL NOT NULL,
+    "accepted_offer_id" INT8 REFERENCES "offer" NOT NULL,
+    "exchange_offer_id" INT8 REFERENCES "offer" NOT NULL,
+    "is_mutual" BOOL NOT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
   );

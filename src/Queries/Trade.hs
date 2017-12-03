@@ -16,9 +16,18 @@ findFromOffers offer1Key offer2Key = sHead <$> foundTrades
         select $
         from $ \trades -> do
             where_
-                ((trades ^. TradeOffer1Id ==. val offer1Key) ||.
-                 (trades ^. TradeOffer2Id ==. val offer1Key))
+                ((trades ^. TradeAcceptedOfferId ==. val offer1Key) ||.
+                 (trades ^. TradeExchangeOfferId ==. val offer1Key))
             where_
-                ((trades ^. TradeOffer1Id ==. val offer2Key) ||.
-                 (trades ^. TradeOffer2Id ==. val offer2Key))
+                ((trades ^. TradeAcceptedOfferId ==. val offer2Key) ||.
+                 (trades ^. TradeExchangeOfferId ==. val offer2Key))
             return trades
+
+findAccepted :: Pg.Key Offer -> App [Pg.Entity Trade]
+findAccepted offerKey =
+    Db.run $
+    select $
+    from $ \(trades `InnerJoin` offers) -> do
+        on (trades ^. TradeAcceptedOfferId ==. offers ^. OfferId)
+        where_ (trades ^. TradeAcceptedOfferId ==. val offerKey)
+        return trades
