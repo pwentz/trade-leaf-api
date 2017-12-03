@@ -20,8 +20,8 @@ import           Queries.Trade               (findFromOffers)
 import           Servant
 
 data TradeRequest = TradeRequest
-    { offer1Id :: Int64
-    , offer2Id :: Int64
+    { acceptedOfferId :: Int64
+    , exchangeOfferId :: Int64
     } deriving (Eq, Show, Generic)
 
 instance FromJSON TradeRequest
@@ -34,7 +34,7 @@ tradeServer = closeOrCreate
 
 closeOrCreate :: TradeRequest -> App (Pg.Entity Trade)
 closeOrCreate tradeReq@TradeRequest {..} = do
-    existingTrade <- findFromOffers (Pg.toSqlKey offer1Id) (Pg.toSqlKey offer2Id)
+    existingTrade <- findFromOffers (Pg.toSqlKey acceptedOfferId) (Pg.toSqlKey exchangeOfferId)
     case existingTrade of
         Nothing -> do
             tradeId <- createTrade tradeReq
@@ -44,7 +44,7 @@ closeOrCreate tradeReq@TradeRequest {..} = do
                 (return . Pg.Entity (Pg.toSqlKey tradeId))
                 mbTrade
         Just trade@Pg.Entity {..} ->
-            closeTrade (Pg.fromSqlKey entityKey) >> return trade
+            makeMutual (Pg.fromSqlKey entityKey) >> return trade
 
 createTrade :: TradeRequest -> App Int64
 createTrade TradeRequest {..} = do
@@ -53,9 +53,9 @@ createTrade TradeRequest {..} = do
         Db.runSafe $
         Pg.insert
             (Trade
-             { tradeOffer1Id = Pg.toSqlKey offer1Id
-             , tradeOffer2Id = Pg.toSqlKey offer2Id
-             , tradeIsOpen = True
+             { tradeAcceptedOfferId = Pg.toSqlKey acceptedOfferId
+             , tradeExchangeOfferId = Pg.toSqlKey exchangeOfferId
+             , tradeIsMutual = True
              , tradeCreatedAt = time
              , tradeUpdatedAt = time
              })
@@ -64,10 +64,10 @@ createTrade TradeRequest {..} = do
         (return . Pg.fromSqlKey)
         eitherTrade
 
-closeTrade :: Int64 -> App ()
-closeTrade tradeId = do
+makeMutual :: Int64 -> App ()
+makeMutual tradeId = do
     mbTrade <- Db.run $ Pg.get (Pg.toSqlKey tradeId :: Pg.Key Trade)
     case mbTrade of
         Nothing -> throwError $ apiErr (E404, CustomError "Trade not found")
         Just trade -> do
-            Db.run $ Pg.update (Pg.toSqlKey tradeId) [TradeIsOpen Pg.=. False]
+            Db.run $ Pg.update (Pg.toSqlKey tradeId) [TradeIsMutual Pg.=. False]

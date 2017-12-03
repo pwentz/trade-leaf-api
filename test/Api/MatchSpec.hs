@@ -1,8 +1,11 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Api.MatchSpec where
 
 import           Api.Match
 import           Api.User                    (UserMeta (username))
 import           Api.Offer                   (OfferResponse(description))
+import Control.Applicative (liftA2)
 import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Coords                 (Coords (Coords))
@@ -14,14 +17,23 @@ import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
+import Models.Trade
 import           Models.User
 import           Queries.Match
 import           SpecHelper                  (runAppToIO, setupTeardown)
 import           Test.Hspec
 import           Test.QuickCheck
 
+data DbSetup = DbSetup
+    { currentUser :: User
+    , currentUserOffer1Key :: Sql.Key Offer
+    , currentUserOffer2Key :: Sql.Key Offer
+    , currentUserOffer3Key :: Sql.Key Offer
+    , matchingOffer1Key :: Sql.Key Offer
+    , matchingOffer2Key :: Sql.Key Offer
+    }
 
-dbSetup :: App User
+dbSetup :: App DbSetup
 dbSetup =
   let
     currentUser time =
@@ -58,17 +70,66 @@ dbSetup =
     user5Key <- Db.run $ Sql.insert (User "Phil" "Q" "phil@q.com" "philQ" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time time)
     user5Offer <- Db.run $ Sql.insert (Offer user5Key artCatKey photoId "it is abstract" 10 time time)
     _ <- Db.run $ Sql.insert (Request user5Offer babysitCatKey "watch all the kids" time time)
-    return (currentUser time)
+    return DbSetup
+              { currentUser = (currentUser time)
+              , currentUserOffer1Key = currUserOffer1
+              , currentUserOffer2Key = currUserOffer2
+              , currentUserOffer3Key = currUserOffer3
+              , matchingOffer1Key = user1Offer
+              , matchingOffer2Key = user5Offer
+              }
 
 spec :: Spec
 spec =
   around setupTeardown $
-    describe "Api.Matches" $
-      it "can get all users for offers within a given radius" $ \config -> do
-        matches <- runAppToIO config $ do
-            currUser <- dbSetup
-            getMatches currUser
-        ((description . offer) <$> matches) `shouldContain` ["i sand fence", "it is abstract"]
-        (distance <$> matches) `shouldBe` [6, 9]
-        ((username . user) <$> matches) `shouldBe` ["ottop", "philQ"]
-        (((description <$>) . exchangeOffers) <$> matches) `shouldContain` [["i offer painting"], ["i will sit baby"]]
+    describe "Api.Matches" $ do
+      context "hasAcceptedOffer" $ do
+        it "returns true if given offer is in trade with any given offers" $ \config -> do
+          DbSetup {..} <- runAppToIO config dbSetup
+          hasApproved <- runAppToIO config $
+            let
+              userOffers =
+                [currentUserOffer1Key, currentUserOffer2Key, currentUserOffer3Key]
+            in do
+            time <- liftIO getCurrentTime
+            _ <- Db.run $ Sql.insert (Trade matchingOffer1Key currentUserOffer1Key True time time)
+            mbOffer <- (Sql.Entity matchingOffer1Key <$>) <$> Db.run (Sql.get matchingOffer1Key)
+            mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
+            mbUserOfferEnts <- return $ (zipWith Sql.Entity userOffers) <$> mbUserOffers
+            sequence (liftA2 hasAcceptedOffer mbOffer mbUserOfferEnts)
+          hasApproved `shouldBe` Just True
+        it "returns false if given offer is NOT in trade with any given offers" $ \config -> do
+          DbSetup {..} <- runAppToIO config dbSetup
+          hasApproved <- runAppToIO config $
+            let
+              userOffers =
+                [currentUserOffer1Key, currentUserOffer2Key, currentUserOffer3Key]
+            in do
+            time <- liftIO getCurrentTime
+            _ <- Db.run $ Sql.insert (Trade currentUserOffer1Key matchingOffer1Key True time time)
+            _ <- Db.run $ Sql.insert (Trade currentUserOffer2Key currentUserOffer3Key False time time)
+            mbOffer <- (Sql.Entity matchingOffer1Key <$>) <$> Db.run (Sql.get matchingOffer1Key)
+            mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
+            mbUserOfferEnts <- return $ (zipWith Sql.Entity userOffers) <$> mbUserOffers
+            sequence (liftA2 hasAcceptedOffer mbOffer mbUserOfferEnts)
+          hasApproved `shouldBe` Just False
+
+      context "getMatches" $ do
+        it "can get all users for offers within a given radius" $ \config -> do
+          matches <- runAppToIO config $ do
+              DbSetup {..} <- dbSetup
+              getMatches currentUser
+          ((description . offer) <$> matches) `shouldContain` ["i sand fence", "it is abstract"]
+          (distance <$> matches) `shouldBe` [6, 9]
+          ((username . user) <$> matches) `shouldBe` ["ottop", "philQ"]
+          (((description <$>) . exchangeOffers) <$> matches) `shouldContain` [["i offer painting"], ["i will sit baby"]]
+        it "excludes offers when they are in trade with current user's matching offer" $ \config -> do
+          matches <- runAppToIO config $ do
+              time <- liftIO getCurrentTime
+              DbSetup {..} <- dbSetup
+              tradeKey <- Db.run $ Sql.insert (Trade matchingOffer1Key currentUserOffer1Key True time time)
+              getMatches currentUser
+          ((description . offer) <$> matches) `shouldBe` ["it is abstract"]
+          (distance <$> matches) `shouldBe` [9]
+          ((username . user) <$> matches) `shouldBe` ["philQ"]
+          (((description <$>) . exchangeOffers) <$> matches) `shouldContain` [["i will sit baby"]]

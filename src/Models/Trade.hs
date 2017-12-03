@@ -17,9 +17,9 @@ TH.share
     [TH.mkPersist TH.sqlSettings, TH.mkMigrate "migrateAll"]
     [TH.persistLowerCase|
     Trade json
-        offer1Id OfferId
-        offer2Id OfferId
-        isOpen Bool
+        acceptedOfferId OfferId
+        exchangeOfferId OfferId
+        isMutual Bool
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
 |]
@@ -28,7 +28,7 @@ instance Eq Trade where
     trade1 == trade2 =
         all
             id
-            [ tradeOffer1Id trade1 == tradeOffer1Id trade2
-            , tradeOffer2Id trade1 == tradeOffer2Id trade2
-            , tradeIsOpen trade1 == tradeIsOpen trade2
+            [ tradeAcceptedOfferId trade1 == tradeAcceptedOfferId trade2
+            , tradeExchangeOfferId trade1 == tradeExchangeOfferId trade2
+            , tradeIsMutual trade1 == tradeIsMutual trade2
             ]
