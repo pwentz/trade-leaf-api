@@ -6,9 +6,10 @@ Apply: |
     "id" SERIAL8 PRIMARY KEY UNIQUE,
     "accepted_offer_id" INT8 REFERENCES "offer" NOT NULL,
     "exchange_offer_id" INT8 REFERENCES "offer" NOT NULL,
-    "is_mutual" BOOL NOT NULL,
+    "is_mutual" BOOL NOT NULL DEFAULT FALSE,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE ("accepted_offer_id", "exchange_offer_id")
   );
 Revert: |
   DROP TABLE "trade";
