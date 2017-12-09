@@ -19,9 +19,11 @@ TH.share
     Trade json
         acceptedOfferId OfferId
         exchangeOfferId OfferId
-        isMutual Bool
+        isMutual Bool default=FALSE
         createdAt UTCTime default=CURRENT_TIMESTAMP
         updatedAt UTCTime default=CURRENT_TIMESTAMP
+        TradeOfferIds acceptedOfferId exchangeOfferId
+        deriving Show
 |]
 
 instance Eq Trade where

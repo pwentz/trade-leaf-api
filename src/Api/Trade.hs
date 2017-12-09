@@ -1,7 +1,10 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Api.Trade where
 
@@ -10,41 +13,55 @@ import           Api.Error                   (ApiErr (..), StatusCode (..),
 import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Aeson                  (FromJSON)
+import qualified Data.ByteString.Char8       as BS
 import           Data.Int                    (Int64)
 import           Data.Time                   (getCurrentTime)
 import qualified Database.Persist.Postgresql as Pg
 import qualified Db.Main                     as Db
 import           GHC.Generics                (Generic)
 import           Models.Trade
-import           Queries.Trade               (findFromOffers)
+import           Queries.Trade               (findAccepted, findExchange,
+                                              findFromOffers)
 import           Servant
+import           Utils                       (sHead)
 
 data TradeRequest = TradeRequest
     { acceptedOfferId :: Int64
     , exchangeOfferId :: Int64
+    } deriving (Generic)
+
+data TradePatchReq = TradePatchReq
+    { isMutual        :: Maybe Bool
+    , acceptedOfferId :: Maybe Int64
+    , exchangeOfferId :: Maybe Int64
     } deriving (Eq, Show, Generic)
 
 instance FromJSON TradeRequest
 
+instance FromJSON TradePatchReq
+
 type TradeAPI
-    = "trades" :> ReqBody '[JSON] TradeRequest :> Post '[JSON] (Pg.Entity Trade)
+     = "trades" :> QueryParam "acceptedOfferId" Int64 :> QueryParam "exchangeOfferId" Int64 :> Get '[JSON] (Maybe (Pg.Entity Trade))
+     :<|> "trades" :> ReqBody '[JSON] TradeRequest :> Post '[JSON] Int64
+     :<|> "trades" :> Capture "id" Int64 :> ReqBody '[JSON] TradePatchReq :> Patch '[JSON] ()
 
 tradeServer :: ServerT TradeAPI App
-tradeServer = closeOrCreate
+tradeServer = getTrade :<|> createTrade :<|> patchTrade
 
-closeOrCreate :: TradeRequest -> App (Pg.Entity Trade)
-closeOrCreate tradeReq@TradeRequest {..} = do
-    existingTrade <- findFromOffers (Pg.toSqlKey acceptedOfferId) (Pg.toSqlKey exchangeOfferId)
-    case existingTrade of
-        Nothing -> do
-            tradeId <- createTrade tradeReq
-            mbTrade <- Db.run $ (Pg.get . Pg.toSqlKey) tradeId
-            maybe
-                (throwError $ apiErr (E500, CustomError "Something went wrong!"))
-                (return . Pg.Entity (Pg.toSqlKey tradeId))
-                mbTrade
-        Just trade@Pg.Entity {..} ->
-            makeMutual (Pg.fromSqlKey entityKey) >> return trade
+getTrade :: Maybe Int64 -> Maybe Int64 -> App (Maybe (Pg.Entity Trade))
+getTrade mbAcceptedOfferId mbExchangeOfferId =
+    maybe getByExchangeOfferId getByAcceptedOfferId mbAcceptedOfferId
+  where
+    getByExchangeOfferId =
+        maybe
+            (return Nothing)
+            ((sHead <$>) . findExchange . Pg.toSqlKey)
+            mbExchangeOfferId
+    getByAcceptedOfferId acceptedOfferId =
+        maybe
+            (sHead <$> (findAccepted $ Pg.toSqlKey acceptedOfferId))
+            (findFromOffers (Pg.toSqlKey acceptedOfferId) . Pg.toSqlKey)
+            mbExchangeOfferId
 
 createTrade :: TradeRequest -> App Int64
 createTrade TradeRequest {..} = do
@@ -52,22 +69,35 @@ createTrade TradeRequest {..} = do
     eitherTrade <-
         Db.runSafe $
         Pg.insert
-            (Trade
+            Trade
              { tradeAcceptedOfferId = Pg.toSqlKey acceptedOfferId
              , tradeExchangeOfferId = Pg.toSqlKey exchangeOfferId
              , tradeIsMutual = True
              , tradeCreatedAt = time
              , tradeUpdatedAt = time
-             })
+             }
     either
         (throwError . apiErr . (,) E400 . sqlError)
         (return . Pg.fromSqlKey)
         eitherTrade
 
-makeMutual :: Int64 -> App ()
-makeMutual tradeId = do
-    mbTrade <- Db.run $ Pg.get (Pg.toSqlKey tradeId :: Pg.Key Trade)
-    case mbTrade of
-        Nothing -> throwError $ apiErr (E404, CustomError "Trade not found")
-        Just trade -> do
-            Db.run $ Pg.update (Pg.toSqlKey tradeId) [TradeIsMutual Pg.=. False]
+patchTrade :: Int64 -> TradePatchReq -> App ()
+patchTrade tradeId TradePatchReq {..} = do
+    traverse updateIsMutual isMutual
+    traverse updateAcceptedOfferId acceptedOfferId
+    traverse updateExchangeOfferId exchangeOfferId
+    return ()
+  where
+    updateIsMutual newIsMutual =
+        Db.run $
+        Pg.update (Pg.toSqlKey tradeId) [TradeIsMutual Pg.=. newIsMutual]
+    updateAcceptedOfferId newAcceptedOfferId =
+        Db.run $
+        Pg.update
+            (Pg.toSqlKey tradeId)
+            [TradeAcceptedOfferId Pg.=. Pg.toSqlKey newAcceptedOfferId]
+    updateExchangeOfferId newExchangeOfferId =
+        Db.run $
+        Pg.update
+            (Pg.toSqlKey tradeId)
+            [TradeExchangeOfferId Pg.=. Pg.toSqlKey newExchangeOfferId]
