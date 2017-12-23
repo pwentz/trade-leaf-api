@@ -106,7 +106,7 @@ data UserMeta = UserMeta
     , photo       :: Maybe (Entity Photo)
     , coordinates :: Maybe Coords
     , offers      :: [OfferResponse]
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 
 instance ToJSON UserMeta
 

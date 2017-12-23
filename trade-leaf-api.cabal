@@ -41,27 +41,28 @@ library
     exposed-modules:
         Config
       , Api
-      , Api.User
       , Api.Auth
       , Api.Error
-      , Api.Photo
       , Api.Match
       , Api.Offer
+      , Api.Photo
       , Api.Request
       , Api.Trade
-      , Utils
+      , Api.User
       , Data.Coords
+      , Db.Main
+      , Models.Category
+      , Models.Offer
+      , Models.Photo
+      , Models.Request
+      , Models.Trade
+      , Models.User
       , Queries.Match
       , Queries.Offer
       , Queries.Request
       , Queries.Trade
-      , Models.Photo
-      , Models.User
-      , Models.Category
-      , Models.Offer
-      , Models.Request
-      , Models.Trade
-      , Db.Main
+      , Queries.User
+      , Utils
     build-depends:
         base >= 4.7 && < 5
       , aeson
@@ -104,18 +105,19 @@ test-suite trade-leaf-api-test
     other-modules:
         SpecHelper
       , Api.ErrorSpec
-      , Api.PhotoSpec
-      , Api.UserSpec
       , Api.MatchSpec
       , Api.OfferSpec
-      , Api.TradeSpec
+      , Api.PhotoSpec
       , Api.RequestSpec
+      , Api.TradeSpec
+      , Api.UserSpec
+      , Data.CoordsSpec
       , Queries.MatchSpec
       , Queries.OfferSpec
       , Queries.RequestSpec
       , Queries.TradeSpec
+      , Queries.UserSpec
       , UtilsSpec
-      , CoordsSpec
     build-depends:
         base
       , trade-leaf-api

@@ -1,9 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Api.MatchSpec where
 
 import           Api.Match
-import           Api.Offer                   (OfferResponse (description))
+import           Api.Offer                   (OfferResponse (description, id))
 import           Api.User                    (UserMeta (username))
 import           Config                      (App)
 import           Control.Applicative         (liftA2)
@@ -79,6 +80,64 @@ dbSetup =
               , matchingOffer1Key = user1Offer
               , matchingOffer2Key = user5Offer
               }
+
+data DbSetup2 = DbSetup2
+    { currentUserKey :: Sql.Key User
+    , currentUserOffer1Key :: Sql.Key Offer
+    , currentUserOffer2Key :: Sql.Key Offer
+    , currentUserOffer3Key :: Sql.Key Offer
+    , currentUserOffer4Key :: Sql.Key Offer
+    , user2Key :: Sql.Key User
+    , user2OfferKey :: Sql.Key Offer
+    , user3Key :: Sql.Key User
+    , user3OfferKey :: Sql.Key Offer
+    , user4Key :: Sql.Key User
+    , user4OfferKey :: Sql.Key Offer
+    }
+
+dbSetup2 :: App DbSetup2
+dbSetup2 =
+  let
+    coords =
+      Coords 41.938132 (-87.642753)
+    currentUser time =
+      User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just coords) time time
+  in do
+    time <- liftIO getCurrentTime
+    photoKey <- Db.run $ Sql.insert (Photo Nothing "" time time)
+    woodworkingCategoryKey <- Db.run $ Sql.insert (Category "woodworking" time time)
+    artCategoryKey <- Db.run $ Sql.insert (Category "decorative art" time time)
+    currentUserKey <- Db.run $ Sql.insert (currentUser time)
+    currentUserOffer1Key <- Db.run $ Sql.insert (Offer currentUserKey artCategoryKey photoKey "some painting" 999 time time)
+    currentUserRequest1Key <- Db.run $ Sql.insert (Request currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time time)
+    user2Key <- Db.run $ Sql.insert (User "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just coords) time time)
+    user2OfferKey <- Db.run $ Sql.insert (Offer user2Key artCategoryKey photoKey "water color 30x40 painting" 999 time time)
+    user2OfferRequestKey <- Db.run $ Sql.insert (Request user2OfferKey artCategoryKey "animal painting for kid" time time)
+    user3Key <- Db.run $ Sql.insert (User "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just coords) time time)
+    user3OfferKey <- Db.run $ Sql.insert (Offer user3Key artCategoryKey photoKey "finger painting dog with lots of colors" 999 time time)
+    user3OfferRequestKey <- Db.run $ Sql.insert (Request user3OfferKey artCategoryKey "looking for a large painting" time time)
+    user4Key <- Db.run $ Sql.insert (User "Millie" "Rock" "bobby@brown.com" "milliebob" "password" Nothing (Just coords) time time)
+    user4OfferKey <- Db.run $ Sql.insert (Offer user4Key artCategoryKey photoKey "man in rain - watercolor" 999 time time)
+    user4OfferRequestKey <- Db.run $ Sql.insert (Request user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time time)
+    currentUserOffer2Key <- Db.run $ Sql.insert (Offer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time time)
+    currentUserRequest2Key <- Db.run $ Sql.insert (Request currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time time)
+    currentUserOffer3Key <- Db.run $ Sql.insert (Offer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time time)
+    currentUserRequest3Key <- Db.run $ Sql.insert (Request currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time time)
+    currentUserOffer4Key <- Db.run $ Sql.insert (Offer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time time)
+    currentUserRequest4Key <- Db.run $ Sql.insert (Request currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time time)
+    return DbSetup2
+            { currentUserKey = currentUserKey
+            , currentUserOffer1Key = currentUserOffer1Key
+            , currentUserOffer2Key = currentUserOffer2Key
+            , currentUserOffer3Key = currentUserOffer3Key
+            , currentUserOffer4Key = currentUserOffer4Key
+            , user2Key = user2Key
+            , user2OfferKey = user2OfferKey
+            , user3Key = user3Key
+            , user3OfferKey = user3OfferKey
+            , user4Key = user4Key
+            , user4OfferKey = user4OfferKey
+            }
 
 spec :: Spec
 spec =
@@ -173,3 +232,15 @@ spec =
           (distance <$> matches) `shouldBe` [9]
           ((username . user) <$> matches) `shouldBe` ["philQ"]
           ((((\ExchangeOffer{..} -> description offer) <$>) . exchangeOffers) <$> matches) `shouldBe` [["i will sit baby"]]
+        it "does not return duplicate matches" $ \config -> do
+          DbSetup2 {..} <- runAppToIO config dbSetup2
+          (matches, offer4MatchKeys) <- runAppToIO config $ do
+            currentUser <- Db.run (Sql.get currentUserKey)
+            mbMatches <- traverse getMatches currentUser
+            offer4Matches <-
+              return $ (exchangeOffers =<<) . filter (\MatchResponse{..} -> Api.Offer.id offer == Sql.fromSqlKey user4OfferKey) <$> mbMatches
+            offer4MatchKeys <-
+              return $ traverse ((\ExchangeOffer{..} -> Sql.toSqlKey $ Api.Offer.id offer) <$>) offer4Matches
+            return (mbMatches, offer4MatchKeys)
+          length <$> matches `shouldBe` Just 3
+          offer4MatchKeys `shouldBe` Just <$> [currentUserOffer2Key, currentUserOffer3Key, currentUserOffer4Key]

@@ -1,4 +1,4 @@
-module CoordsSpec where
+module Data.CoordsSpec where
 
 import Data.Coords
 import Test.Hspec
