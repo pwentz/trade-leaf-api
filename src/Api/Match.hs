@@ -11,6 +11,7 @@ import           Config               (App)
 import           Control.Applicative  (liftA2)
 import           Data.Aeson           (ToJSON)
 import           Data.Coords          (distanceInMiles)
+import           Data.List            (nub)
 import           Data.Maybe           (fromMaybe)
 import qualified Database.Persist.Sql as Sql
 import           GHC.Generics         (Generic)
@@ -19,20 +20,21 @@ import           Models.Trade
 import           Models.User
 import           Queries.Match
 import           Queries.Trade        (findAccepted, findExchange)
+import           Queries.User         (findByUsername)
 import           Servant
 import           Utils
 
 data ExchangeOffer = ExchangeOffer
     { offer      :: OfferResponse
     , isAccepted :: Bool
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 
 data MatchResponse = MatchResponse
     { offer          :: OfferResponse
     , user           :: UserMeta
     , exchangeOffers :: [ExchangeOffer]
     , distance       :: Int
-    } deriving (Show, Generic)
+    } deriving (Eq, Show, Generic)
 
 instance ToJSON ExchangeOffer
 
@@ -45,11 +47,16 @@ matchServer :: ServerT MatchAPI App
 matchServer = getMatches
 
 getMatches :: User -> App [MatchResponse]
-getMatches currentUser =
-    matchesByUser currentUser >>= findWithinRadius currentUser
+getMatches currentUser = do
+    mbUserKey <- (Sql.entityKey <$>) <$> findByUsername (userUsername currentUser)
+    maybe (return []) (findMatches . flip Sql.Entity currentUser) mbUserKey
+  where
+    findMatches :: Sql.Entity User -> App [MatchResponse]
+    findMatches =
+      liftA2 (>>=) matchesByUser findWithinRadius
 
-findWithinRadius :: User -> [(Sql.Entity Offer, Sql.Entity User)] -> App [MatchResponse]
-findWithinRadius currentUser = foldr foldMatches (return [])
+findWithinRadius :: Sql.Entity User -> [(Sql.Entity Offer, Sql.Entity User)] -> App [MatchResponse]
+findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
   where
     distanceBetweenUsers :: User -> User -> Double
     distanceBetweenUsers user1 user2 =
@@ -57,11 +64,10 @@ findWithinRadius currentUser = foldr foldMatches (return [])
         liftA2 distanceInMiles (userCoordinates user1) (userCoordinates user2)
     foldMatches :: (Sql.Entity Offer, Sql.Entity User) -> App [MatchResponse] -> App [MatchResponse]
     foldMatches (offer, user) acc =
-        let distance = distanceBetweenUsers currentUser (Sql.entityVal user)
+        let distance = distanceBetweenUsers (Sql.entityVal currentUser) (Sql.entityVal user)
             isWithinDistance offerEntity =
                 distance <= offerRadius (Sql.entityVal offerEntity)
-        in do currentUserMatches <-
-                  findUserMatches currentUser (Sql.entityVal offer)
+        in do currentUserMatches <- findUserMatches currentUser offer
               userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user)
               hasOfferBeenAccepted <- containsExchangeOffer offer currentUserMatches
               acceptedUserOfferTrade <- findAcceptedTrade offer currentUserMatches
@@ -94,7 +100,7 @@ findWithinRadius currentUser = foldr foldMatches (return [])
                   else acc
     isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> Bool
     isAcceptedUserTradeMutual =
-        fromMaybe False . ((tradeIsMutual . Sql.entityVal) <$>)
+        fromMaybe False . (tradeIsMutual . Sql.entityVal <$>)
     acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
     acceptedExchangeOffer acceptedTrade =
       let

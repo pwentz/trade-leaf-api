@@ -25,8 +25,7 @@ TH.share
 
 instance Eq Photo where
     photo1 == photo2 =
-        all
-            id
+        and
             [ photoCloudinaryId photo1 == photoCloudinaryId photo2
             , photoImageUrl photo1 == photoImageUrl photo2
             ]

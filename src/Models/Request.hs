@@ -29,8 +29,7 @@ TH.share
 
 instance Eq Request where
     req1 == req2 =
-        all
-            id
+        and
             [ requestOfferId req1 == requestOfferId req2
             , requestCategoryId req1 == requestCategoryId req2
             , requestDescription req1 == requestDescription req2

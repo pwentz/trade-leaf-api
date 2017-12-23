@@ -8,7 +8,7 @@ module Api.Offer where
 import           Api.Request                 (RequestResponse,
                                               toRequestResponse)
 import           Config                      (App)
-import           Control.Applicative         (liftA2, liftA3)
+import           Control.Applicative         (liftA2)
 import           Control.Monad               (join)
 import           Data.Aeson                  (ToJSON)
 import           Data.Int                    (Int64)
@@ -37,20 +37,20 @@ data OfferResponse = OfferResponse
 instance ToJSON OfferResponse
 
 getOffers :: Int64 -> App [OfferResponse]
-getOffers userId =
-    traverse toOfferResponse =<< userOffers (toSqlKey userId)
+getOffers userId = traverse toOfferResponse =<< userOffers (toSqlKey userId)
 
 toOfferResponse :: Entity Offer -> App OfferResponse
 toOfferResponse offer@(Entity offerKey offerVal) =
     let mkOfferRes reqRes (_, catNm, photo) =
             OfferResponse
-                { id = fromSqlKey offerKey
-                , userId = fromSqlKey (offerUserId offerVal)
-                , description = offerDescription offerVal
-                , category = E.unValue catNm
-                , request = reqRes
-                , photo = photo
-                }
-    in do mbData <- getOfferData offer
-          reqRes <- join <$> (traverse toRequestResponse =<< getOfferRequest offerKey)
-          return (mkOfferRes reqRes mbData)
+            { id = fromSqlKey offerKey
+            , userId = fromSqlKey (offerUserId offerVal)
+            , description = offerDescription offerVal
+            , category = E.unValue catNm
+            , request = reqRes
+            , photo = photo
+            }
+    in liftA2
+           mkOfferRes
+           (join <$> (traverse toRequestResponse =<< getOfferRequest offerKey))
+           (getOfferData offer)

@@ -34,8 +34,7 @@ TH.share
 
 instance Eq User where
     user1 == user2 =
-        all
-            id
+        and
             [ userFirstName user1 == userFirstName user2
             , userLastName user1 == userLastName user2
             , userEmail user1 == userEmail user2
