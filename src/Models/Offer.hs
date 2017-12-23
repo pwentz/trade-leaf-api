@@ -31,8 +31,7 @@ TH.share
 
 instance Eq Offer where
     offer1 == offer2 =
-        all
-            id
+        and
             [ offerUserId offer1 == offerUserId offer2
             , offerCategoryId offer1 == offerCategoryId offer2
             , offerPhotoId offer1 == offerPhotoId offer2

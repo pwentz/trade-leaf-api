@@ -11,6 +11,7 @@ import           Config               (App)
 import           Control.Applicative  (liftA2)
 import           Data.Aeson           (ToJSON)
 import           Data.Coords          (distanceInMiles)
+import           Data.List            (nub)
 import           Data.Maybe           (fromMaybe)
 import qualified Database.Persist.Sql as Sql
 import           GHC.Generics         (Generic)
@@ -19,10 +20,9 @@ import           Models.Trade
 import           Models.User
 import           Queries.Match
 import           Queries.Trade        (findAccepted, findExchange)
+import           Queries.User         (findByUsername)
 import           Servant
 import           Utils
-import Data.List (nub)
-import Queries.User (findByUsername)
 
 data ExchangeOffer = ExchangeOffer
     { offer      :: OfferResponse
@@ -48,12 +48,12 @@ matchServer = getMatches
 
 getMatches :: User -> App [MatchResponse]
 getMatches currentUser = do
-    mbUserKey <- (Sql.entityKey <$>) <$> (findByUsername $ userUsername currentUser)
-    case mbUserKey of
-        Nothing ->
-          return []
-        Just userKey ->
-          matchesByUser (Sql.Entity userKey currentUser) >>= findWithinRadius (Sql.Entity userKey currentUser)
+    mbUserKey <- (Sql.entityKey <$>) <$> findByUsername (userUsername currentUser)
+    maybe (return []) (findMatches . flip Sql.Entity currentUser) mbUserKey
+  where
+    findMatches :: Sql.Entity User -> App [MatchResponse]
+    findMatches =
+      liftA2 (>>=) matchesByUser findWithinRadius
 
 findWithinRadius :: Sql.Entity User -> [(Sql.Entity Offer, Sql.Entity User)] -> App [MatchResponse]
 findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
@@ -100,7 +100,7 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
                   else acc
     isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> Bool
     isAcceptedUserTradeMutual =
-        fromMaybe False . ((tradeIsMutual . Sql.entityVal) <$>)
+        fromMaybe False . (tradeIsMutual . Sql.entityVal <$>)
     acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
     acceptedExchangeOffer acceptedTrade =
       let

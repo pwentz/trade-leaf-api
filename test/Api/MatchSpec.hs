@@ -42,7 +42,7 @@ spec =
             _ <- Db.run $ Sql.insert (Trade user2OfferKey currentUserOffer1Key True time time)
             mbOffer <- (Sql.Entity user2OfferKey <$>) <$> Db.run (Sql.get user2OfferKey)
             mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
-            mbUserOfferEnts <- return $ (zipWith Sql.Entity userOffers) <$> mbUserOffers
+            let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
             sequence (liftA2 containsExchangeOffer mbOffer mbUserOfferEnts)
           hasApproved `shouldBe` Just True
         it "returns false if given offer is NOT accepted offer in trade with any given offers" $ \config -> do
@@ -57,11 +57,11 @@ spec =
             _ <- Db.run $ Sql.insert (Trade currentUserOffer2Key currentUserOffer3Key False time time)
             mbOffer <- (Sql.Entity user2OfferKey <$>) <$> Db.run (Sql.get user2OfferKey)
             mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
-            mbUserOfferEnts <- return $ (zipWith Sql.Entity userOffers) <$> mbUserOffers
+            let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
             sequence (liftA2 containsExchangeOffer mbOffer mbUserOfferEnts)
           hasApproved `shouldBe` Just False
 
-      context "findAcceptedTrade" $ do
+      context "findAcceptedTrade" $
         it "finds trade w/ accepted offer within given list of offers where given offer is exchange offer" $ \config -> do
           DbSetup {..} <- runAppToIO config dbSetup
           (acceptedTradeKey, expected) <- runAppToIO config $
@@ -74,7 +74,7 @@ spec =
               trade2Key <- Db.run $ Sql.insert (Trade currentUserOffer3Key user2OfferKey False time time)
               mbOffer <- (Sql.Entity user4OfferKey <$>) <$> Db.run (Sql.get user4OfferKey)
               mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
-              mbUserOfferEnts <- return $ (zipWith Sql.Entity userOffers) <$> mbUserOffers
+              let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
               acceptedOfferTrade <- join <$> sequence (liftA2 findAcceptedTrade mbOffer mbUserOfferEnts)
               return (Sql.entityKey <$> acceptedOfferTrade, trade1Key)
           acceptedTradeKey `shouldBe` Just expected
@@ -140,10 +140,8 @@ spec =
           (matches, offer4MatchKeys) <- runAppToIO config $ do
             currentUser <- Db.run (Sql.get currentUserKey)
             mbMatches <- traverse getMatches currentUser
-            offer4Matches <-
-              return $ (exchangeOffers =<<) . filter (\MatchResponse{..} -> Api.Offer.id offer == Sql.fromSqlKey user4OfferKey) <$> mbMatches
-            offer4MatchKeys <-
-              return $ traverse ((\ExchangeOffer{..} -> Sql.toSqlKey $ Api.Offer.id offer) <$>) offer4Matches
+            let offer4Matches = (exchangeOffers =<<) . filter (\MatchResponse{..} -> Api.Offer.id offer == Sql.fromSqlKey user4OfferKey) <$> mbMatches
+                offer4MatchKeys = traverse ((\ExchangeOffer{..} -> Sql.toSqlKey $ Api.Offer.id offer) <$>) offer4Matches
             return (mbMatches, offer4MatchKeys)
           length <$> matches `shouldBe` Just 2
           offer4MatchKeys `shouldBe` Just <$> [currentUserOffer2Key, currentUserOffer3Key, currentUserOffer4Key]

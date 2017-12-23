@@ -24,4 +24,4 @@ TH.share
 |]
 
 instance Eq Category where
-    cat1 == cat2 = all id [categoryName cat1 == categoryName cat2]
+    cat1 == cat2 = and [categoryName cat1 == categoryName cat2]

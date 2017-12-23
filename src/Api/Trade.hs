@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
@@ -59,7 +58,7 @@ getTrade mbAcceptedOfferId mbExchangeOfferId =
             mbExchangeOfferId
     getByAcceptedOfferId acceptedOfferId =
         maybe
-            (sHead <$> (findAccepted $ Pg.toSqlKey acceptedOfferId))
+            (sHead <$> findAccepted (Pg.toSqlKey acceptedOfferId))
             (findFromOffers (Pg.toSqlKey acceptedOfferId) . Pg.toSqlKey)
             mbExchangeOfferId
 

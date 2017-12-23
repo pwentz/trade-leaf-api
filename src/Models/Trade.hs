@@ -28,8 +28,7 @@ TH.share
 
 instance Eq Trade where
     trade1 == trade2 =
-        all
-            id
+        and
             [ tradeAcceptedOfferId trade1 == tradeAcceptedOfferId trade2
             , tradeExchangeOfferId trade1 == tradeExchangeOfferId trade2
             , tradeIsMutual trade1 == tradeIsMutual trade2
