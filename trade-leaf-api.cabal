@@ -48,6 +48,7 @@ library
       , Api.Photo
       , Api.Request
       , Api.Trade
+      , Api.TradeChat
       , Api.User
       , Data.Coords
       , Db.Main
@@ -56,6 +57,7 @@ library
       , Models.Photo
       , Models.Request
       , Models.Trade
+      , Models.TradeChat
       , Models.User
       , Queries.Match
       , Queries.Offer
@@ -110,6 +112,7 @@ test-suite trade-leaf-api-test
       , Api.PhotoSpec
       , Api.RequestSpec
       , Api.TradeSpec
+      , Api.TradeChatSpec
       , Api.UserSpec
       , Data.CoordsSpec
       , Queries.MatchSpec

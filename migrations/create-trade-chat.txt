@@ -1,0 +1,13 @@
+Description: Creates TradeChat table.
+Created: 2018-02-17 19:45:14.827908 UTC
+Depends: create-offer
+Apply: |
+  CREATE TABLE "trade_chat" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "offer1_id" INT8 REFERENCES "offer" NOT NULL,
+    "offer2_id" INT8 REFERENCES "offer" NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+Revert: |
+  DROP TABLE "trade_chat"

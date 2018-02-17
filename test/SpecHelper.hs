@@ -16,6 +16,7 @@ import           Models.Offer
 import           Models.Photo
 import           Models.Request
 import           Models.Trade
+import           Models.TradeChat
 import           Models.User
 
 runAppToIO :: Config -> App a -> IO a
@@ -39,6 +40,7 @@ setupTeardown runTestsWith = do
     cleanDb pool = do
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Request])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Trade])) pool
+        Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter TradeChat])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Offer])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Category])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter User])) pool
