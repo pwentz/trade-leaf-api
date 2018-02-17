@@ -12,6 +12,7 @@ import           Models.Offer
 import           Models.Photo
 import           Models.Request
 import           Models.Trade
+import           Models.TradeChat
 import           Models.User
 import           SpecHelper                  (runAppToIO, setupTeardown)
 import           Test.Hspec
@@ -29,6 +30,17 @@ defaultUser time =
     , userCoordinates = Nothing
     , userCreatedAt = time
     , userUpdatedAt = time
+    }
+
+newTrade :: Pg.Key Offer -> Pg.Key Offer -> UTCTime -> Trade
+newTrade offer1Key offer2Key time =
+  Trade
+    { tradeAcceptedOfferId = offer1Key
+    , tradeExchangeOfferId = offer2Key
+    , tradeTradeChatId = Nothing
+    , tradeIsSuccessful = True
+    , tradeCreatedAt = time
+    , tradeUpdatedAt = time
     }
 
 spec :: Spec
@@ -59,22 +71,8 @@ spec =
               userKey <- Db.run $ Pg.insert (defaultUser time)
               offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
               offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
-              targetTrade <- Db.run $ Pg.insert
-                                    Trade
-                                      { tradeIsMutual = True
-                                      , tradeAcceptedOfferId = offer1Key
-                                      , tradeExchangeOfferId = offer2Key
-                                      , tradeCreatedAt = time
-                                      , tradeUpdatedAt = time
-                                      }
-              otherTrade <- Db.run $ Pg.insert
-                                    Trade
-                                      { tradeIsMutual = True
-                                      , tradeAcceptedOfferId = offer2Key
-                                      , tradeExchangeOfferId = offer1Key
-                                      , tradeCreatedAt = time
-                                      , tradeUpdatedAt = time
-                                      }
+              targetTrade <- Db.run $ Pg.insert (newTrade offer1Key offer2Key time)
+              otherTrade <- Db.run $ Pg.insert (newTrade offer2Key offer1Key time)
               foundTrade <- getTrade (Just $ Pg.fromSqlKey offer1Key) (Just $ Pg.fromSqlKey offer2Key)
               return (foundTrade, offer1Key, offer2Key)
             tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
@@ -88,22 +86,8 @@ spec =
                 offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
                 offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
                 offer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-                firstTrade <- Db.run $ Pg.insert
-                                      Trade
-                                        { tradeIsMutual = True
-                                        , tradeAcceptedOfferId = offer1Key
-                                        , tradeExchangeOfferId = offer2Key
-                                        , tradeCreatedAt = time
-                                        , tradeUpdatedAt = time
-                                        }
-                nextTrade <- Db.run $ Pg.insert
-                                      Trade
-                                        { tradeIsMutual = True
-                                        , tradeAcceptedOfferId = offer1Key
-                                        , tradeExchangeOfferId = offer3Key
-                                        , tradeCreatedAt = time
-                                        , tradeUpdatedAt = time
-                                        }
+                firstTrade <- Db.run $ Pg.insert (newTrade offer1Key offer2Key time)
+                nextTrade <- Db.run $ Pg.insert (newTrade offer1Key offer3Key time)
                 foundTrade <- getTrade (Just $ Pg.fromSqlKey offer1Key) Nothing
                 return (foundTrade, offer1Key, offer2Key)
               tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
@@ -113,7 +97,7 @@ spec =
               foundTrade `shouldBe` Nothing
       context "patchTrade" $ do
         it "updates multiple fields on trade" $ \config -> do
-            (trade, offer2Key, offer3Key) <- runAppToIO config $ do
+            (trade, offer2Key, offer3Key, tradeChatKey) <- runAppToIO config $ do
               time <- liftIO getCurrentTime
               photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
               categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
@@ -121,24 +105,20 @@ spec =
               offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
               offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
               offer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-              tradeKey <- Db.run $ Pg.insert
-                                    Trade
-                                      { tradeIsMutual = True
-                                      , tradeAcceptedOfferId = offer1Key
-                                      , tradeExchangeOfferId = offer2Key
-                                      , tradeCreatedAt = time
-                                      , tradeUpdatedAt = time
-                                      }
+              tradeChatKey <- Db.run $ Pg.insert (TradeChat offer1Key offer2Key time time)
+              tradeKey <- Db.run $ Pg.insert (newTrade offer1Key offer2Key time)
               _ <- patchTrade (Pg.fromSqlKey tradeKey) $
                       TradePatchReq
                         (Just False)
+                        (Just (Pg.fromSqlKey tradeChatKey))
                         (Just (Pg.fromSqlKey offer2Key))
                         (Just (Pg.fromSqlKey offer3Key))
               foundTrade <- Db.run $ Pg.get tradeKey
-              return (foundTrade, offer2Key, offer3Key)
+              return (foundTrade, offer2Key, offer3Key, tradeChatKey)
             tradeAcceptedOfferId <$> trade `shouldBe` Just offer2Key
             tradeExchangeOfferId <$> trade `shouldBe` Just offer3Key
-            tradeIsMutual <$> trade `shouldBe` Just False
+            tradeIsSuccessful <$> trade `shouldBe` Just False
+            (tradeTradeChatId =<< trade) `shouldBe` Just tradeChatKey
         it "only updates values that are present on patch request" $ \config -> do
             (trade, offer1Key, offer3Key) <- runAppToIO config $ do
               time <- liftIO getCurrentTime
@@ -148,21 +128,15 @@ spec =
               offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
               offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
               offer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-              tradeKey <- Db.run $ Pg.insert
-                                    Trade
-                                      { tradeIsMutual = True
-                                      , tradeAcceptedOfferId = offer1Key
-                                      , tradeExchangeOfferId = offer2Key
-                                      , tradeCreatedAt = time
-                                      , tradeUpdatedAt = time
-                                      }
+              tradeKey <- Db.run $ Pg.insert (newTrade offer1Key offer2Key time)
               _ <- patchTrade (Pg.fromSqlKey tradeKey) $
                       TradePatchReq
                         (Just False)
+                        Nothing
                         Nothing
                         (Just (Pg.fromSqlKey offer3Key))
               foundTrade <- Db.run $ Pg.get tradeKey
               return (foundTrade, offer1Key, offer3Key)
             tradeAcceptedOfferId <$> trade `shouldBe` Just offer1Key
             tradeExchangeOfferId <$> trade `shouldBe` Just offer3Key
-            tradeIsMutual <$> trade `shouldBe` Just False
+            tradeIsSuccessful <$> trade `shouldBe` Just False

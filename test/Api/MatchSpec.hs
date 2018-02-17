@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards       #-}
 
 module Api.MatchSpec where
 
@@ -11,7 +11,7 @@ import           Control.Applicative         (liftA2)
 import           Control.Monad               (join)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Coords                 (Coords (Coords))
-import           Data.Time                   (getCurrentTime)
+import           Data.Time                   (UTCTime, getCurrentTime)
 import           Database.Persist            (get)
 import qualified Database.Persist.Postgresql as Sql
 import qualified Db.Main                     as Db
@@ -20,11 +20,25 @@ import           Models.Offer
 import           Models.Photo
 import           Models.Request
 import           Models.Trade
+import           Models.TradeChat
 import           Models.User
 import           Queries.Match
-import           SpecHelper                  (runAppToIO, setupTeardown, DbSetup(..), dbSetup)
+import           SpecHelper                  (DbSetup (..), dbSetup, runAppToIO,
+                                              setupTeardown)
 import           Test.Hspec
 import           Test.QuickCheck
+
+newTrade :: Sql.Key Offer -> Sql.Key Offer -> Maybe (Sql.Key TradeChat) -> UTCTime -> Trade
+newTrade offer1Key offer2Key mbTradeChatKey time =
+  Trade
+    { tradeAcceptedOfferId = offer1Key
+    , tradeExchangeOfferId = offer2Key
+    , tradeTradeChatId = mbTradeChatKey
+    , tradeIsSuccessful = False
+    , tradeCreatedAt = time
+    , tradeUpdatedAt = time
+    }
+
 
 spec :: Spec
 spec =
@@ -39,7 +53,8 @@ spec =
                 [currentUserOffer1Key, currentUserOffer2Key, currentUserOffer3Key, currentUserOffer4Key]
             in do
             time <- liftIO getCurrentTime
-            _ <- Db.run $ Sql.insert (Trade user2OfferKey currentUserOffer1Key True time time)
+            tradeChatKey <- Db.run $ Sql.insert (TradeChat user2OfferKey currentUserOffer1Key time time)
+            _ <- Db.run $ Sql.insert (newTrade user2OfferKey currentUserOffer1Key (Just tradeChatKey) time)
             mbOffer <- (Sql.Entity user2OfferKey <$>) <$> Db.run (Sql.get user2OfferKey)
             mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
             let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -53,8 +68,9 @@ spec =
                 [currentUserOffer1Key, currentUserOffer2Key, currentUserOffer3Key, currentUserOffer4Key]
             in do
             time <- liftIO getCurrentTime
-            _ <- Db.run $ Sql.insert (Trade currentUserOffer1Key user2OfferKey True time time)
-            _ <- Db.run $ Sql.insert (Trade currentUserOffer2Key currentUserOffer3Key False time time)
+            tradeChatKey <- Db.run $ Sql.insert (TradeChat currentUserOffer1Key user2OfferKey time time)
+            _ <- Db.run $ Sql.insert (newTrade currentUserOffer1Key user2OfferKey (Just tradeChatKey) time)
+            _ <- Db.run $ Sql.insert (newTrade currentUserOffer2Key currentUserOffer3Key Nothing time)
             mbOffer <- (Sql.Entity user2OfferKey <$>) <$> Db.run (Sql.get user2OfferKey)
             mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
             let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -70,8 +86,8 @@ spec =
                 [currentUserOffer1Key, currentUserOffer2Key, currentUserOffer3Key, currentUserOffer4Key]
             in do
               time <- liftIO getCurrentTime
-              trade1Key <- Db.run $ Sql.insert (Trade currentUserOffer2Key user4OfferKey False time time)
-              trade2Key <- Db.run $ Sql.insert (Trade currentUserOffer3Key user2OfferKey False time time)
+              trade1Key <- Db.run $ Sql.insert (newTrade currentUserOffer2Key user4OfferKey Nothing time)
+              trade2Key <- Db.run $ Sql.insert (newTrade currentUserOffer3Key user2OfferKey Nothing time)
               mbOffer <- (Sql.Entity user4OfferKey <$>) <$> Db.run (Sql.get user4OfferKey)
               mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
               let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -98,7 +114,8 @@ spec =
               time <- liftIO getCurrentTime
               DbSetup {..} <- dbSetup
               currentUser <- Db.run (Sql.get currentUserKey)
-              tradeKey <- Db.run $ Sql.insert (Trade user2OfferKey currentUserOffer1Key True time time)
+              tradeChatKey <- Db.run $ Sql.insert (TradeChat user2OfferKey currentUserOffer1Key time time)
+              tradeKey <- Db.run $ Sql.insert (newTrade user2OfferKey currentUserOffer1Key (Just tradeChatKey) time)
               traverse getMatches currentUser
           (((\MatchResponse{..} -> description offer) <$>) <$> matches) `shouldBe` Just ["man in rain - watercolor"]
           ((distance <$>) <$> matches) `shouldBe` Just [9]
@@ -113,7 +130,7 @@ spec =
             time <- liftIO getCurrentTime
             DbSetup {..} <- dbSetup
             currentUser <- Db.run (Sql.get currentUserKey)
-            tradeKey <- Db.run $ Sql.insert (Trade currentUserOffer1Key user2OfferKey False time time)
+            tradeKey <- Db.run $ Sql.insert (newTrade currentUserOffer1Key user2OfferKey Nothing time)
             traverse getMatches currentUser
           (((\MatchResponse{..} -> description offer) <$>) <$> matches) `shouldBe` Just ["water color 30x40 painting", "man in rain - watercolor"]
           ((distance <$>) <$> matches) `shouldBe` Just [6, 9]
@@ -129,7 +146,8 @@ spec =
               time <- liftIO getCurrentTime
               DbSetup {..} <- dbSetup
               currentUser <- Db.run (Sql.get currentUserKey)
-              _ <- Db.run $ Sql.insert (Trade currentUserOffer1Key user2OfferKey True time time)
+              tradeChatKey <- Db.run $ Sql.insert (TradeChat currentUserOffer1Key user2OfferKey time time)
+              _ <- Db.run $ Sql.insert (newTrade currentUserOffer1Key user2OfferKey (Just tradeChatKey) time)
               traverse getMatches currentUser
           (((\MatchResponse{..} -> description offer) <$>) <$> matches) `shouldBe` Just ["man in rain - watercolor"]
           ((distance <$>) <$> matches) `shouldBe` Just [9]

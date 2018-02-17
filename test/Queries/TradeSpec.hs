@@ -32,7 +32,18 @@ defaultUser time =
 spec :: Spec
 spec =
   around setupTeardown $
-    describe "Queries.Trade" $ do
+    describe "Queries.Trade" $
+      let
+        createTrade offer1Key offer2Key time =
+          Trade
+            { tradeAcceptedOfferId = offer1Key
+            , tradeExchangeOfferId = offer2Key
+            , tradeTradeChatId = Nothing
+            , tradeIsSuccessful = True
+            , tradeCreatedAt = time
+            , tradeUpdatedAt = time
+            }
+      in do
       it "findFromOffers" $ \config -> do
         (foundTradeKey, existingTradeKey) <- runAppToIO config $ do
           time <- liftIO getCurrentTime
@@ -41,7 +52,7 @@ spec =
           userKey <- Db.run $ Pg.insert (defaultUser time)
           offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
           offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
-          tradeKey <- Db.run $ Pg.insert (Trade offer1Key offer2Key True time time)
+          tradeKey <- Db.run $ Pg.insert (createTrade offer1Key offer2Key time)
           foundTrade <- findFromOffers offer2Key offer1Key
           return (Pg.entityKey <$> foundTrade, tradeKey)
         foundTradeKey `shouldBe` Just existingTradeKey
@@ -55,9 +66,9 @@ spec =
           exchangeOffer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "calculus" 1 time time)
           exchangeOffer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
           exchangeOffer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-          trade1Key <- Db.run $ Pg.insert (Trade acceptedOfferKey exchangeOffer1Key True time time)
-          trade2Key <- Db.run $ Pg.insert (Trade exchangeOffer3Key exchangeOffer2Key True time time)
-          trade3Key <- Db.run $ Pg.insert (Trade acceptedOfferKey exchangeOffer3Key True time time)
+          trade1Key <- Db.run $ Pg.insert (createTrade acceptedOfferKey exchangeOffer1Key time)
+          trade2Key <- Db.run $ Pg.insert (createTrade exchangeOffer3Key exchangeOffer2Key time)
+          trade3Key <- Db.run $ Pg.insert (createTrade acceptedOfferKey exchangeOffer3Key time)
           foundTrades <- findAccepted acceptedOfferKey
           return (Pg.entityKey <$> foundTrades, [trade1Key, trade3Key])
         foundTrades `shouldBe` expectedTrades
@@ -71,9 +82,9 @@ spec =
           acceptedOffer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "calculus" 1 time time)
           acceptedOffer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
           acceptedOffer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-          trade1Key <- Db.run $ Pg.insert (Trade acceptedOffer3Key acceptedOffer1Key True time time)
-          trade2Key <- Db.run $ Pg.insert (Trade acceptedOffer2Key exchangeOfferKey True time time)
-          trade3Key <- Db.run $ Pg.insert (Trade acceptedOffer3Key exchangeOfferKey True time time)
+          trade1Key <- Db.run $ Pg.insert (createTrade acceptedOffer3Key acceptedOffer1Key time)
+          trade2Key <- Db.run $ Pg.insert (createTrade acceptedOffer2Key exchangeOfferKey time)
+          trade3Key <- Db.run $ Pg.insert (createTrade acceptedOffer3Key exchangeOfferKey time)
           foundTrades <- findExchange exchangeOfferKey
           return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
         foundTrades `shouldBe` expectedTrades
