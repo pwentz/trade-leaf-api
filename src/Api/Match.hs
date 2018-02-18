@@ -99,8 +99,8 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
                                } :) <$> acc
                   else acc
     isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> Bool
-    isAcceptedUserTradeMutual =
-        fromMaybe False . (tradeIsMutual . Sql.entityVal <$>)
+    isAcceptedUserTradeMutual trade =
+        maybe False (const True) (tradeTradeChatId . Sql.entityVal =<< trade)
     acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
     acceptedExchangeOffer acceptedTrade =
       let

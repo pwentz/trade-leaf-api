@@ -30,7 +30,8 @@ data TradeRequest = TradeRequest
     } deriving (Generic)
 
 data TradePatchReq = TradePatchReq
-    { isMutual        :: Maybe Bool
+    { isSuccessful        :: Maybe Bool
+    , tradeChatId :: Maybe Int64
     , acceptedOfferId :: Maybe Int64
     , exchangeOfferId :: Maybe Int64
     } deriving (Eq, Show, Generic)
@@ -71,7 +72,8 @@ createTrade TradeRequest {..} = do
             Trade
              { tradeAcceptedOfferId = Pg.toSqlKey acceptedOfferId
              , tradeExchangeOfferId = Pg.toSqlKey exchangeOfferId
-             , tradeIsMutual = True
+             , tradeTradeChatId = Nothing
+             , tradeIsSuccessful = False
              , tradeCreatedAt = time
              , tradeUpdatedAt = time
              }
@@ -82,14 +84,20 @@ createTrade TradeRequest {..} = do
 
 patchTrade :: Int64 -> TradePatchReq -> App ()
 patchTrade tradeId TradePatchReq {..} = do
-    traverse updateIsMutual isMutual
+    traverse updateIsSuccessful isSuccessful
+    traverse updateTradeChatId tradeChatId
     traverse updateAcceptedOfferId acceptedOfferId
     traverse updateExchangeOfferId exchangeOfferId
     return ()
   where
-    updateIsMutual newIsMutual =
+    updateIsSuccessful newVal =
         Db.run $
-        Pg.update (Pg.toSqlKey tradeId) [TradeIsMutual Pg.=. newIsMutual]
+        Pg.update (Pg.toSqlKey tradeId) [TradeIsSuccessful Pg.=. newVal]
+    updateTradeChatId newKey =
+        Db.run $
+        Pg.update
+            (Pg.toSqlKey tradeId)
+            [TradeTradeChatId Pg.=. Just (Pg.toSqlKey newKey)]
     updateAcceptedOfferId newAcceptedOfferId =
         Db.run $
         Pg.update

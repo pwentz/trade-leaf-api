@@ -14,26 +14,28 @@ import qualified Models.Offer         as Offer
 import qualified Models.Photo         as Photo
 import qualified Models.Request       as Request
 import qualified Models.Trade         as Trade
+import qualified Models.TradeChat     as TradeChat
 import qualified Models.User          as User
 
 doMigrations :: SqlPersistT IO ()
 doMigrations = do
-    runMigration Photo.migrateAll
-    runMigration Category.migrateAll
-    runMigration User.migrateAll
-    runMigration Offer.migrateAll
-    runMigration Request.migrateAll
-    runMigration Trade.migrateAll
+  runMigration Photo.migrateAll
+  runMigration Category.migrateAll
+  runMigration User.migrateAll
+  runMigration Offer.migrateAll
+  runMigration Request.migrateAll
+  runMigration Trade.migrateAll
+  runMigration TradeChat.migrateAll
 
 run :: (MonadReader Config m, MonadIO m) => SqlPersistT IO b -> m b
 run query = do
-    pool <- asks getPool
-    liftIO $ runSqlPool query pool
+  pool <- asks getPool
+  liftIO $ runSqlPool query pool
 
 runSafe :: SqlPersistT IO a -> App (Either String a)
 runSafe query =
-    (do pool <- asks getPool
-        liftIO (Right <$> runSqlPool query pool)) `catch`
-    defaultFn
+  (do pool <- asks getPool
+      liftIO (Right <$> runSqlPool query pool)) `catch`
+  defaultFn
   where
     defaultFn (SomeException e) = return (Left $ displayException e)

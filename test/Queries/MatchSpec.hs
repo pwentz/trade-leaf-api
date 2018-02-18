@@ -45,8 +45,10 @@ spec =
                   currUser <- Db.run (Sql.get currentUserKey)
                   mbOffers <- traverse findMatches (Sql.Entity currentUserKey <$> currUser)
                   return ((offerDescription . Sql.entityVal <$>) <$> mbOffers)
-              matchDescriptions `shouldBe` Just ["water color 30x40 painting", "finger painting dog with lots of colors", "man in rain - watercolor"]
-              length <$> matchDescriptions `shouldBe` Just 3
+              case matchDescriptions of
+                Nothing -> expectationFailure "Expected value to be present, but there was nothing"
+                Just xs ->
+                  xs `shouldMatchList` ["water color 30x40 painting", "finger painting dog with lots of colors", "man in rain - watercolor"]
             it "can find a user's matching offers by offer" $ \config -> do
               DbSetup{..} <- runAppToIO config dbSetup
               matchDescriptions <- runAppToIO config $ do
