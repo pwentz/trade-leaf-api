@@ -42,6 +42,7 @@ In order for this app to work as expected, there needs to be a number of environ
   - `TRADE_LEAF_SECRET` - this is the sha used for encryption when building JSON Web Tokens for authentication.
   - `DBM_MIGRATION_STORE` - this is the absolute path of the `migrations` folder where the migrations are stored.
   - `DBM_DATABASE` - this is the connection string for the database
+  - `WS_SECRET` - this is the secret key that is used during the handshake with the websockets server.
 
 
 ## Testing

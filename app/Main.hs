@@ -14,5 +14,4 @@ main = do
     port <- lookupSetting "PORT" 8080
     cfg <- getConfig
     let logger = setLogger $ getEnv cfg
-    -- runSqlPool doMigrations $ getPool cfg
     run port $ logger $ app cfg
