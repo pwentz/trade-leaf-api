@@ -10,26 +10,23 @@ import           Models.Photo
 import           Models.Request
 import           Models.User
 import           Queries.Request
-import           SpecHelper                  (runAppToIO, setupTeardown)
+import qualified SpecHelper                  as Spec
 import           Test.Hspec
 import           Test.QuickCheck
 
-defaultUser :: UTCTime -> User
-defaultUser time =
-  User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time time
-
-
 spec :: Spec
 spec =
-  around setupTeardown $
-    describe "Queries.Request" $
-      it "can get the request for a given offer" $ \config -> do
-        time <- liftIO getCurrentTime
-        reqRes <- runAppToIO config $ do
-          userKey <- Db.run $ Pg.insert (defaultUser time)
-          photoKey <- Db.run $ Pg.insert (Photo Nothing "dog.png" time time)
-          categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
-          offerKey <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
-          reqKey <- Db.run $ Pg.insert (Request offerKey categoryKey "chemistry" time time)
-          getOfferRequest offerKey
-        ((requestDescription . Pg.entityVal) <$> reqRes) `shouldBe` Just "chemistry"
+  around Spec.setupTeardown $
+  describe "Queries.Request" $
+  it "can get the request for a given offer" $ \config -> do
+    time <- liftIO getCurrentTime
+    reqRes <-
+      Spec.runAppToIO config $ do
+        userKey <-
+          Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+        photoKey <- Spec.createPhoto "dog.png" time
+        categoryKey <- Spec.createCategory "tutor" time
+        offerKey <- Spec.createOffer userKey categoryKey photoKey "physics" 1 time
+        reqKey <- Spec.createRequest offerKey categoryKey "chemistry" time
+        getOfferRequest offerKey
+    ((requestDescription . Pg.entityVal) <$> reqRes) `shouldBe` Just "chemistry"

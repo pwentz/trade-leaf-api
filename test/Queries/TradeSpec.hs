@@ -1,6 +1,8 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Queries.TradeSpec where
 
-import           Queries.Trade
+import           Config                      (App)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Time                   (UTCTime, getCurrentTime)
 import qualified Database.Persist.Postgresql as Pg
@@ -11,80 +13,74 @@ import           Models.Photo
 import           Models.Request
 import           Models.Trade
 import           Models.User
-import           SpecHelper                  (runAppToIO, setupTeardown)
+import           Queries.Trade
+import qualified SpecHelper                  as Spec
 import           Test.Hspec
 import           Test.QuickCheck
 
-defaultUser :: UTCTime -> User
-defaultUser time =
-  User
-    { userFirstName = "Doug"
-    , userLastName = "Stamper"
-    , userEmail = "dougiestamps@yahoo.com"
-    , userUsername = "dstamper2"
-    , userPassword = "underwood4prez"
-    , userPhotoId = Nothing
-    , userCoordinates = Nothing
-    , userCreatedAt = time
-    , userUpdatedAt = time
-    }
+data DbSetup = DbSetup
+  { photoKey    :: Pg.Key Photo
+  , categoryKey :: Pg.Key Category
+  , userKey     :: Pg.Key User
+  , offer1Key   :: Pg.Key Offer
+  , offer2Key   :: Pg.Key Offer
+  , offer3Key   :: Pg.Key Offer
+  , offer4Key   :: Pg.Key Offer
+  }
+
+dbSetup :: App DbSetup
+dbSetup = do
+  time <- liftIO getCurrentTime
+  photoKey <- Spec.createPhoto "cat.png" time
+  categoryKey <- Spec.createCategory "tutor" time
+  userKey <-
+    Spec.createUser
+      "Doug"
+      "Stamper"
+      "dougiestamps@yahoo.com"
+      "dstamper2"
+      "underwood4prez"
+      Nothing
+      Nothing
+      time
+  offer1Key <- Spec.createOffer userKey categoryKey photoKey "physics" 1 time
+  offer2Key <- Spec.createOffer userKey categoryKey photoKey "chem" 1 time
+  offer3Key <- Spec.createOffer userKey categoryKey photoKey "biology" 1 time
+  offer4Key <- Spec.createOffer userKey categoryKey photoKey "calculus" 1 time
+  return (DbSetup photoKey categoryKey userKey offer1Key offer2Key offer3Key offer4Key)
 
 spec :: Spec
 spec =
-  around setupTeardown $
-    describe "Queries.Trade" $
-      let
-        createTrade offer1Key offer2Key time =
-          Trade
-            { tradeAcceptedOfferId = offer1Key
-            , tradeExchangeOfferId = offer2Key
-            , tradeTradeChatId = Nothing
-            , tradeIsSuccessful = True
-            , tradeCreatedAt = time
-            , tradeUpdatedAt = time
-            }
-      in do
-      it "findFromOffers" $ \config -> do
-        (foundTradeKey, existingTradeKey) <- runAppToIO config $ do
+  around Spec.setupTeardown $
+  describe "Queries.Trade" $ do
+    it "findFromOffers" $ \config -> do
+      DbSetup {..} <- Spec.runAppToIO config dbSetup
+      (foundTradeKey, existingTradeKey) <-
+        Spec.runAppToIO config $ do
           time <- liftIO getCurrentTime
-          photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
-          categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
-          userKey <- Db.run $ Pg.insert (defaultUser time)
-          offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
-          offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
-          tradeKey <- Db.run $ Pg.insert (createTrade offer1Key offer2Key time)
+          tradeKey <- Spec.createTrade offer1Key offer2Key Nothing False time
           foundTrade <- findFromOffers offer2Key offer1Key
           return (Pg.entityKey <$> foundTrade, tradeKey)
-        foundTradeKey `shouldBe` Just existingTradeKey
-      it "findAccepted" $ \config -> do
-        (foundTrades, expectedTrades) <- runAppToIO config $ do
+      foundTradeKey `shouldBe` Just existingTradeKey
+    it "findAccepted" $ \config -> do
+      DbSetup {..} <- Spec.runAppToIO config dbSetup
+      (foundTrades, expectedTrades) <-
+        Spec.runAppToIO config $ do
           time <- liftIO getCurrentTime
-          photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
-          categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
-          userKey <- Db.run $ Pg.insert (defaultUser time)
-          acceptedOfferKey <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
-          exchangeOffer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "calculus" 1 time time)
-          exchangeOffer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
-          exchangeOffer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-          trade1Key <- Db.run $ Pg.insert (createTrade acceptedOfferKey exchangeOffer1Key time)
-          trade2Key <- Db.run $ Pg.insert (createTrade exchangeOffer3Key exchangeOffer2Key time)
-          trade3Key <- Db.run $ Pg.insert (createTrade acceptedOfferKey exchangeOffer3Key time)
-          foundTrades <- findAccepted acceptedOfferKey
-          return (Pg.entityKey <$> foundTrades, [trade1Key, trade3Key])
-        foundTrades `shouldBe` expectedTrades
-      it "findExchange" $ \config -> do
-        (foundTrades, expectedTrades) <- runAppToIO config $ do
+          trade1Key <- Spec.createTrade offer1Key offer4Key Nothing False time
+          trade2Key <- Spec.createTrade offer3Key offer2Key Nothing False time
+          trade3Key <- Spec.createTrade offer1Key offer3Key Nothing False time
+          foundTrades <- findAccepted offer1Key
+          return (Pg.entityKey <$> foundTrades, [trade3Key, trade1Key])
+      foundTrades `shouldMatchList` expectedTrades
+    it "findExchange" $ \config -> do
+      DbSetup {..} <- Spec.runAppToIO config dbSetup
+      (foundTrades, expectedTrades) <-
+        Spec.runAppToIO config $ do
           time <- liftIO getCurrentTime
-          photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
-          categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
-          userKey <- Db.run $ Pg.insert (defaultUser time)
-          exchangeOfferKey <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "physics" 1 time time)
-          acceptedOffer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "calculus" 1 time time)
-          acceptedOffer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chem" 1 time time)
-          acceptedOffer3Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "biology" 1 time time)
-          trade1Key <- Db.run $ Pg.insert (createTrade acceptedOffer3Key acceptedOffer1Key time)
-          trade2Key <- Db.run $ Pg.insert (createTrade acceptedOffer2Key exchangeOfferKey time)
-          trade3Key <- Db.run $ Pg.insert (createTrade acceptedOffer3Key exchangeOfferKey time)
-          foundTrades <- findExchange exchangeOfferKey
+          trade1Key <- Spec.createTrade offer3Key offer4Key Nothing False time
+          trade2Key <- Spec.createTrade offer2Key offer1Key Nothing False time
+          trade3Key <- Spec.createTrade offer3Key offer1Key Nothing False time
+          foundTrades <- findExchange offer1Key
           return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
-        foundTrades `shouldBe` expectedTrades
+      foundTrades `shouldMatchList` expectedTrades
