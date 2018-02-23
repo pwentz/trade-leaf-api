@@ -12,54 +12,51 @@ import           Models.Photo
 import           Models.Request
 import           Models.User
 import           Queries.Offer               (getOfferData, userOffers)
-import           SpecHelper                  (runAppToIO, setupTeardown)
+import qualified SpecHelper                  as Spec
 import           Test.Hspec
 import           Test.QuickCheck
-import           Utils                       (second)
-
-
-defaultUser :: UTCTime -> User
-defaultUser time =
-  User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time time
-
+import           Utils                       (first, second, third)
 
 spec :: Spec
 spec =
-  around setupTeardown $
-    describe "Queries.Offer" $ do
-      it "can get all offers for a given user" $ \config -> do
-        time <- liftIO getCurrentTime
-        userOfferDescriptions <-
-            let
-              randomUser =
-                User "fred" "johnson" "fred@gmail.com" "freddy-j" "password" Nothing Nothing time time
-            in
-            runAppToIO config $ do
-            userKey <- Db.run $ Sql.insert (defaultUser time)
-            randomUserKey <- Db.run $ Sql.insert randomUser
-            categoryKey <- Db.run $ Sql.insert (Category "something" time time)
-            photoKey <- Db.run $ Sql.insert (Photo Nothing "some-image.jpeg" time time)
-            userOffer1 <- Db.run $ Sql.insert (Offer userKey categoryKey photoKey "baby sitter" 1 time time)
-            userOffer2 <- Db.run $ Sql.insert (Offer userKey categoryKey photoKey "circus clown" 1 time time)
-            offer3 <- Db.run $ Sql.insert (Offer randomUserKey categoryKey photoKey "carpentry" 1 time time)
-            offers <- userOffers userKey
-            return ((offerDescription . Sql.entityVal) <$> offers)
-        userOfferDescriptions `shouldBe` ["baby sitter", "circus clown"]
-      it "can get the request, category, and photo for a given offer" $ \config -> do
-        time <- liftIO getCurrentTime
-        (user, category, photo) <-
-          let
-            offer userKey catKey photoKey =
-              Offer userKey catKey photoKey "baby sitter" 1 time time
-          in
-          runAppToIO config $ do
-            userKey <- Db.run $ Sql.insert (defaultUser time)
-            categoryKey <- Db.run $ Sql.insert (Category "baby sitter" time time)
-            otherCategoryKey <- Db.run $ Sql.insert (Category "wood working" time time)
-            photoKey <- Db.run $ Sql.insert (Photo Nothing "some-image.jpeg" time time)
-            offerKey <- Db.run $ Sql.insert (offer userKey categoryKey photoKey)
-            offerReq <- Db.run $ Sql.insert (Request offerKey otherCategoryKey "some request" time time)
-            getOfferData (Sql.Entity offerKey (offer userKey categoryKey photoKey))
-        userUsername (Sql.entityVal user) `shouldBe` "pwentz"
-        E.unValue category `shouldBe` "baby sitter"
-        photoImageUrl (Sql.entityVal photo) `shouldBe` "some-image.jpeg"
+  around Spec.setupTeardown $
+  describe "Queries.Offer" $ do
+    it "can get all offers for a given user" $ \config -> do
+      userOfferDescriptions <-
+        Spec.runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          userKey <-
+            Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+          randomUserKey <-
+            Spec.createUser
+              "fred"
+              "johnson"
+              "fred@gmail.com"
+              "freddy-j"
+              "password"
+              Nothing
+              Nothing
+              time
+          categoryKey <- Spec.createCategory "something" time
+          photoKey <- Spec.createPhoto "some-image.jpeg" time
+          _ <- Spec.createOffer userKey categoryKey photoKey "baby sitter" 1 time
+          _ <- Spec.createOffer userKey categoryKey photoKey "circus clown" 1 time
+          _ <- Spec.createOffer randomUserKey categoryKey photoKey "carpentry" 1 time
+          fmap (offerDescription . Sql.entityVal) <$> userOffers userKey
+      userOfferDescriptions `shouldBe` ["baby sitter", "circus clown"]
+    it "can get the request, category, and photo for a given offer" $ \config -> do
+      res <-
+        Spec.runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          userKey <-
+            Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+          categoryKey <- Spec.createCategory "baby sitter" time
+          otherCategoryKey <- Spec.createCategory "wood working" time
+          photoKey <- Spec.createPhoto "some-image.jpeg" time
+          offerKey <- Spec.createOffer userKey categoryKey photoKey "i sit babies" 1 time
+          offerReq <- Spec.createRequest offerKey otherCategoryKey "some request" time
+          mbOffer <- fmap (Sql.Entity offerKey) <$> Db.run (Sql.get offerKey)
+          traverse getOfferData mbOffer
+      userUsername . Sql.entityVal . first <$> res `shouldBe` Just "pwentz"
+      E.unValue . second <$> res `shouldBe` Just "baby sitter"
+      photoImageUrl . Sql.entityVal . third <$> res `shouldBe` Just "some-image.jpeg"

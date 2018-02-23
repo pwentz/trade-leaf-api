@@ -12,33 +12,31 @@ import           Models.Offer
 import           Models.Photo
 import           Models.TradeChat
 import           Models.User
-import           SpecHelper                  (runAppToIO, setupTeardown)
+import qualified SpecHelper                  as Spec
 import           Test.Hspec
 import           Test.QuickCheck
 
-defaultUser :: UTCTime -> User
-defaultUser time =
-  User "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time time
-
 spec :: Spec
 spec =
-  around setupTeardown $
-    describe "Api.TradeChat" $
-      context "createTradeChat" $
-        it "creates a new TradeChat" $ \config ->
-          let tradeChatReq offer1Key offer2Key =
-                TradeChatRequest
-                { offer1Id = Pg.fromSqlKey offer1Key
-                , offer2Id = Pg.fromSqlKey offer2Key
-                }
-          in do tradeChatCount <-
-                  runAppToIO config $ do
-                    time <- liftIO getCurrentTime
-                    photoKey <- Db.run $ Pg.insert (Photo Nothing "cat.png" time time)
-                    userKey <- Db.run $ Pg.insert (defaultUser time)
-                    categoryKey <- Db.run $ Pg.insert (Category "tutor" time time)
-                    offer1Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "chemistry" 1 time time)
-                    offer2Key <- Db.run $ Pg.insert (Offer userKey categoryKey photoKey "history" 1 time time)
-                    _ <- createTradeChat (tradeChatReq offer1Key offer2Key)
-                    Db.run $ Pg.count ([] :: [Pg.Filter TradeChat])
-                tradeChatCount `shouldBe` 1
+  around Spec.setupTeardown $
+  describe "Api.TradeChat" $
+  context "createTradeChat" $
+  it "creates a new TradeChat" $ \config ->
+    let tradeChatReq offer1Key offer2Key =
+          TradeChatRequest {offer1Id = Pg.fromSqlKey offer1Key, offer2Id = Pg.fromSqlKey offer2Key}
+    in do (newTradeChat, offer1Key, offer2Key, tradeChatCount) <-
+            Spec.runAppToIO config $ do
+              time <- liftIO getCurrentTime
+              photoKey <- Spec.createPhoto "cat.png" time
+              userKey <-
+                Spec.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+              categoryKey <- Spec.createCategory "tutor" time
+              offer1Key <- Spec.createOffer userKey categoryKey photoKey "chemistry" 1 time
+              offer2Key <- Spec.createOffer userKey categoryKey photoKey "history" 1 time
+              tradeChatKey <- createTradeChat (tradeChatReq offer1Key offer2Key)
+              mbTradeChat <- Db.run $ Pg.get (Pg.toSqlKey tradeChatKey :: Pg.Key TradeChat)
+              tradeChatCount <- Db.run $ Pg.count ([] :: [Pg.Filter TradeChat])
+              return (mbTradeChat, offer1Key, offer2Key, tradeChatCount)
+          tradeChatCount `shouldBe` 1
+          tradeChatOffer1Id <$> newTradeChat `shouldBe` Just offer1Key
+          tradeChatOffer2Id <$> newTradeChat `shouldBe` Just offer2Key
