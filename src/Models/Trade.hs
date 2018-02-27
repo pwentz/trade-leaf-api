@@ -12,7 +12,6 @@ import           Data.Time
 import           Database.Persist.Sql
 import qualified Database.Persist.TH  as TH
 import           Models.Offer
-import           Models.TradeChat
 
 TH.share
     [TH.mkPersist TH.sqlSettings, TH.mkMigrate "migrateAll"]
@@ -20,7 +19,6 @@ TH.share
       Trade json
           acceptedOfferId OfferId
           exchangeOfferId OfferId
-          tradeChatId TradeChatId Maybe
           isSuccessful Bool default=FALSE
           createdAt UTCTime default=CURRENT_TIMESTAMP
           updatedAt UTCTime default=CURRENT_TIMESTAMP
@@ -33,6 +31,5 @@ instance Eq Trade where
     and
       [ tradeAcceptedOfferId trade1 == tradeAcceptedOfferId trade2
       , tradeExchangeOfferId trade1 == tradeExchangeOfferId trade2
-      , tradeTradeChatId trade1 == tradeTradeChatId trade2
       , tradeIsSuccessful trade1 == tradeIsSuccessful trade2
       ]

@@ -9,6 +9,7 @@ import           Api.Offer            (OfferResponse (id), toOfferResponse)
 import           Api.User             (UserMeta (..), getUserMeta)
 import           Config               (App)
 import           Control.Applicative  (liftA2)
+import Control.Monad (join)
 import           Data.Aeson           (ToJSON)
 import           Data.Coords          (distanceInMiles)
 import           Data.List            (nub)
@@ -19,7 +20,7 @@ import           Models.Offer
 import           Models.Trade
 import           Models.User
 import           Queries.Match
-import           Queries.Trade        (findAccepted, findExchange)
+import           Queries.Trade        (findAccepted, findExchange, findTradeChat)
 import           Queries.User         (findByUsername)
 import           Servant
 import           Utils
@@ -71,10 +72,11 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
               userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user)
               hasOfferBeenAccepted <- containsExchangeOffer offer currentUserMatches
               acceptedUserOfferTrade <- findAcceptedTrade offer currentUserMatches
+              isTradeMutual <- isAcceptedUserTradeMutual acceptedUserOfferTrade
               if isWithinDistance offer &&
                  any isWithinDistance currentUserMatches &&
                  not hasOfferBeenAccepted &&
-                 not (isAcceptedUserTradeMutual acceptedUserOfferTrade)
+                 not isTradeMutual
                   then do
                       offerRes <- toOfferResponse offer
                       exchangeOffers <- traverse toOfferResponse currentUserMatches
@@ -98,9 +100,9 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
                                , distance = round distance
                                } :) <$> acc
                   else acc
-    isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> Bool
+    isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> App Bool
     isAcceptedUserTradeMutual trade =
-        maybe False (const True) (tradeTradeChatId . Sql.entityVal =<< trade)
+        maybe False (const True) . join <$> traverse (findTradeChat . Sql.entityKey) trade
     acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
     acceptedExchangeOffer acceptedTrade =
       let

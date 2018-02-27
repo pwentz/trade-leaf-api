@@ -98,9 +98,8 @@ spec =
                 , currentUserOffer4Key
                 ]
           in do time <- liftIO getCurrentTime
-                tradeChatKey <- Spec.createTradeChat user2OfferKey currentUserOffer1Key time
-                _ <-
-                  Spec.createTrade user2OfferKey currentUserOffer1Key (Just tradeChatKey) False time
+                tradeKey <- Spec.createTrade user2OfferKey currentUserOffer1Key False time
+                tradeChatKey <- Spec.createTradeChat tradeKey time
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -117,10 +116,10 @@ spec =
                 , currentUserOffer4Key
                 ]
           in do time <- liftIO getCurrentTime
-                tradeChatKey <- Spec.createTradeChat currentUserOffer1Key user2OfferKey time
-                _ <-
-                  Spec.createTrade currentUserOffer1Key user2OfferKey (Just tradeChatKey) False time
-                _ <- Spec.createTrade currentUserOffer2Key currentUserOffer3Key Nothing False time
+                tradeKey <-
+                  Spec.createTrade currentUserOffer1Key user2OfferKey False time
+                _ <- Spec.createTrade currentUserOffer2Key currentUserOffer3Key False time
+                tradeChatKey <- Spec.createTradeChat tradeKey time
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -139,8 +138,8 @@ spec =
                 , currentUserOffer4Key
                 ]
           in do time <- liftIO getCurrentTime
-                trade1Key <- Spec.createTrade currentUserOffer2Key user4OfferKey Nothing False time
-                trade2Key <- Spec.createTrade currentUserOffer3Key user2OfferKey Nothing False time
+                trade1Key <- Spec.createTrade currentUserOffer2Key user4OfferKey False time
+                trade2Key <- Spec.createTrade currentUserOffer3Key user2OfferKey False time
                 mbOffer <- (Sql.Entity user4OfferKey <$>) <$> Db.run (Sql.get user4OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -169,9 +168,9 @@ spec =
             time <- liftIO getCurrentTime
             DbSetup {..} <- dbSetup
             currentUser <- Db.run (Sql.get currentUserKey)
-            tradeChatKey <- Spec.createTradeChat user2OfferKey currentUserOffer1Key time
             tradeKey <-
-              Spec.createTrade user2OfferKey currentUserOffer1Key (Just tradeChatKey) False time
+              Spec.createTrade user2OfferKey currentUserOffer1Key False time
+            tradeChatKey <- Spec.createTradeChat tradeKey time
             traverse getMatches currentUser
         (((\MatchResponse {..} -> description offer) <$>) <$> matches) `shouldBe`
           Just ["man in rain - watercolor"]
@@ -187,7 +186,7 @@ spec =
                   time <- liftIO getCurrentTime
                   DbSetup {..} <- dbSetup
                   currentUser <- Db.run (Sql.get currentUserKey)
-                  tradeKey <- Spec.createTrade currentUserOffer1Key user2OfferKey Nothing False time
+                  tradeKey <- Spec.createTrade currentUserOffer1Key user2OfferKey False time
                   traverse getMatches currentUser
               (fmap (\MatchResponse {..} -> description offer) <$> matches) `shouldBe`
                 Just ["water color 30x40 painting", "man in rain - watercolor"]
@@ -205,14 +204,13 @@ spec =
                   time <- liftIO getCurrentTime
                   DbSetup {..} <- dbSetup
                   currentUser <- Db.run (Sql.get currentUserKey)
-                  tradeChatKey <- Spec.createTradeChat currentUserOffer1Key user2OfferKey time
-                  _ <-
+                  tradeKey <-
                     Spec.createTrade
                       currentUserOffer1Key
                       user2OfferKey
-                      (Just tradeChatKey)
                       False
                       time
+                  tradeChatKey <- Spec.createTradeChat tradeKey time
                   traverse getMatches currentUser
               (((\MatchResponse {..} -> description offer) <$>) <$> matches) `shouldBe`
                 Just ["man in rain - watercolor"]

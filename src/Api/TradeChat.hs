@@ -20,8 +20,7 @@ import           Models.TradeChat
 import           Servant
 
 data TradeChatRequest = TradeChatRequest
-  { offer1Id :: Int64
-  , offer2Id :: Int64
+  { tradeId :: Int64
   } deriving (Eq, Show, Generic)
 
 instance ToJSON TradeChatRequest
@@ -40,7 +39,7 @@ createTradeChat TradeChatRequest {..} = do
   eitherTradeChat <-
     Db.runSafe $
     Sql.insert
-      (TradeChat (Sql.toSqlKey offer1Id) (Sql.toSqlKey offer2Id) time time)
+      (TradeChat (Sql.toSqlKey tradeId) time time)
   either
     (throwError . apiErr . (,) E400 . sqlError)
     (return . Sql.fromSqlKey)

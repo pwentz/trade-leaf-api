@@ -40,8 +40,8 @@ setupTeardown runTestsWith = do
     cleanDb :: Pg.ConnectionPool -> IO ()
     cleanDb pool = do
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Request])) pool
-        Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Trade])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter TradeChat])) pool
+        Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Trade])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Offer])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Category])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter User])) pool
@@ -123,30 +123,28 @@ newRequest offerKey categoryKey desc time =
     , requestUpdatedAt = time
     }
 
-createTrade :: Pg.Key Offer -> Pg.Key Offer -> Maybe (Pg.Key TradeChat) -> Bool -> UTCTime -> App (Pg.Key Trade)
-createTrade acceptedOfferKey exchangeOfferKey tradeChatKey isSuccessful time =
-  Db.run $ Pg.insert (newTrade acceptedOfferKey exchangeOfferKey tradeChatKey isSuccessful time)
+createTrade :: Pg.Key Offer -> Pg.Key Offer -> Bool -> UTCTime -> App (Pg.Key Trade)
+createTrade acceptedOfferKey exchangeOfferKey isSuccessful time =
+  Db.run $ Pg.insert (newTrade acceptedOfferKey exchangeOfferKey isSuccessful time)
 
-newTrade :: Pg.Key Offer -> Pg.Key Offer -> Maybe (Pg.Key TradeChat) -> Bool -> UTCTime -> Trade
-newTrade acceptedOfferKey exchangeOfferKey tradeChatKey isSuccessful time =
+newTrade :: Pg.Key Offer -> Pg.Key Offer -> Bool -> UTCTime -> Trade
+newTrade acceptedOfferKey exchangeOfferKey isSuccessful time =
   Trade
     { tradeAcceptedOfferId = acceptedOfferKey
     , tradeExchangeOfferId = exchangeOfferKey
-    , tradeTradeChatId = tradeChatKey
     , tradeIsSuccessful = isSuccessful
     , tradeCreatedAt = time
     , tradeUpdatedAt = time
     }
 
-createTradeChat :: Pg.Key Offer -> Pg.Key Offer -> UTCTime -> App (Pg.Key TradeChat)
-createTradeChat offer1Key offer2Key time =
-  Db.run $ Pg.insert (newTradeChat offer1Key offer2Key time)
+createTradeChat :: Pg.Key Trade -> UTCTime -> App (Pg.Key TradeChat)
+createTradeChat tradeKey time =
+  Db.run $ Pg.insert (newTradeChat tradeKey time)
 
-newTradeChat :: Pg.Key Offer -> Pg.Key Offer -> UTCTime -> TradeChat
-newTradeChat offer1Key offer2Key time =
+newTradeChat :: Pg.Key Trade -> UTCTime -> TradeChat
+newTradeChat tradeKey time =
   TradeChat
-    { tradeChatOffer1Id = offer1Key
-    , tradeChatOffer2Id = offer2Key
+    { tradeChatTradeId = tradeKey
     , tradeChatCreatedAt = time
     , tradeChatUpdatedAt = time
     }

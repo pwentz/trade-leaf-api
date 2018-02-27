@@ -72,8 +72,8 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            targetTrade <- Spec.createTrade offer1Key offer2Key Nothing True time
-            otherTrade <- Spec.createTrade offer2Key offer1Key Nothing True time
+            targetTrade <- Spec.createTrade offer1Key offer2Key True time
+            otherTrade <- Spec.createTrade offer2Key offer1Key True time
             foundTrade <- getTrade (Just $ Pg.fromSqlKey offer1Key) (Just $ Pg.fromSqlKey offer2Key)
             return foundTrade
         tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
@@ -83,8 +83,8 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            firstTrade <- Spec.createTrade offer1Key offer2Key Nothing True time
-            nextTrade <- Spec.createTrade offer1Key offer3Key Nothing True time
+            firstTrade <- Spec.createTrade offer1Key offer2Key True time
+            nextTrade <- Spec.createTrade offer1Key offer3Key True time
             getTrade (Just $ Pg.fromSqlKey offer1Key) Nothing
         tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
         tradeExchangeOfferId . Pg.entityVal <$> trade `shouldBe` Just offer2Key
@@ -94,33 +94,30 @@ spec =
     context "patchTrade" $ do
       it "updates multiple fields on trade" $ \config -> do
         DbSetup {..} <- Spec.runAppToIO config dbSetup
-        (trade, tradeChatKey) <-
+        trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeChatKey <- Spec.createTradeChat offer1Key offer2Key time
-            tradeKey <- Spec.createTrade offer1Key offer2Key Nothing True time
+            tradeKey <- Spec.createTrade offer1Key offer2Key True time
+            tradeChatKey <- Spec.createTradeChat tradeKey time
             _ <-
               patchTrade (Pg.fromSqlKey tradeKey) $
               TradePatchReq
                 (Just False)
-                (Just (Pg.fromSqlKey tradeChatKey))
                 (Just (Pg.fromSqlKey offer2Key))
                 (Just (Pg.fromSqlKey offer3Key))
-            foundTrade <- Db.run $ Pg.get tradeKey
-            return (foundTrade, tradeChatKey)
+            Db.run (Pg.get tradeKey)
         tradeAcceptedOfferId <$> trade `shouldBe` Just offer2Key
         tradeExchangeOfferId <$> trade `shouldBe` Just offer3Key
         tradeIsSuccessful <$> trade `shouldBe` Just False
-        (tradeTradeChatId =<< trade) `shouldBe` Just tradeChatKey
       it "only updates values that are present on patch request" $ \config -> do
         DbSetup {..} <- Spec.runAppToIO config dbSetup
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeKey <- Spec.createTrade offer1Key offer2Key Nothing True time
+            tradeKey <- Spec.createTrade offer1Key offer2Key True time
             _ <-
               patchTrade (Pg.fromSqlKey tradeKey) $
-              TradePatchReq (Just False) Nothing Nothing (Just (Pg.fromSqlKey offer3Key))
+              TradePatchReq (Just False) Nothing (Just (Pg.fromSqlKey offer3Key))
             Db.run (Pg.get tradeKey)
         tradeAcceptedOfferId <$> trade `shouldBe` Just offer1Key
         tradeExchangeOfferId <$> trade `shouldBe` Just offer3Key

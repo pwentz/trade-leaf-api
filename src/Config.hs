@@ -38,7 +38,6 @@ data Config = Config
   { getPool      :: ConnectionPool
   , getEnv       :: Environment
   , getJwtSecret :: String
-  , getWsSecret  :: String
   }
 
 data Environment
@@ -86,8 +85,7 @@ getConfig = do
   env <- lookupSetting "ENV" Development
   pool <- makePool env
   jwtSecret <- lookupRequired "TRADE_LEAF_SECRET"
-  wsSecret <- lookupRequired "WS_SECRET"
-  return Config {getPool = pool, getEnv = env, getJwtSecret = jwtSecret, getWsSecret = wsSecret}
+  return Config {getPool = pool, getEnv = env, getJwtSecret = jwtSecret}
 
 lookupSetting :: Read a => String -> a -> IO a
 lookupSetting env def = do

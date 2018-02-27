@@ -22,9 +22,9 @@ spec =
   describe "Api.TradeChat" $
   context "createTradeChat" $
   it "creates a new TradeChat" $ \config ->
-    let tradeChatReq offer1Key offer2Key =
-          TradeChatRequest {offer1Id = Pg.fromSqlKey offer1Key, offer2Id = Pg.fromSqlKey offer2Key}
-    in do (newTradeChat, offer1Key, offer2Key, tradeChatCount) <-
+    let tradeChatReq tradeKey =
+          TradeChatRequest {tradeId = Pg.fromSqlKey tradeKey}
+    in do (newTradeChat, tradeKey, tradeChatCount) <-
             Spec.runAppToIO config $ do
               time <- liftIO getCurrentTime
               photoKey <- Spec.createPhoto "cat.png" time
@@ -33,10 +33,10 @@ spec =
               categoryKey <- Spec.createCategory "tutor" time
               offer1Key <- Spec.createOffer userKey categoryKey photoKey "chemistry" 1 time
               offer2Key <- Spec.createOffer userKey categoryKey photoKey "history" 1 time
-              tradeChatKey <- createTradeChat (tradeChatReq offer1Key offer2Key)
+              tradeKey <- Spec.createTrade offer1Key offer2Key False time
+              tradeChatKey <- createTradeChat (tradeChatReq tradeKey)
               mbTradeChat <- Db.run $ Pg.get (Pg.toSqlKey tradeChatKey :: Pg.Key TradeChat)
               tradeChatCount <- Db.run $ Pg.count ([] :: [Pg.Filter TradeChat])
-              return (mbTradeChat, offer1Key, offer2Key, tradeChatCount)
+              return (mbTradeChat, tradeKey, tradeChatCount)
           tradeChatCount `shouldBe` 1
-          tradeChatOffer1Id <$> newTradeChat `shouldBe` Just offer1Key
-          tradeChatOffer2Id <$> newTradeChat `shouldBe` Just offer2Key
+          tradeChatTradeId <$> newTradeChat `shouldBe` Just tradeKey

@@ -1,12 +1,11 @@
 Description: Creates Trade table.
 Created: 2017-12-02 00:44:39.46979 UTC
-Depends: create-offer create-trade-chat
+Depends: create-offer
 Apply: |
   CREATE TABLE "trade" (
     "id" SERIAL8 PRIMARY KEY UNIQUE,
     "accepted_offer_id" INT8 REFERENCES "offer" NOT NULL,
     "exchange_offer_id" INT8 REFERENCES "offer" NOT NULL,
-    "trade_chat_id" INT8 REFERENCES "trade_chat" UNIQUE,
     "is_successful" BOOL NOT NULL DEFAULT FALSE,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
