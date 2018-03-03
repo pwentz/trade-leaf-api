@@ -34,6 +34,7 @@ import           GHC.Generics                (Generic)
 import           Models.Offer
 import           Models.Photo
 import           Models.User
+import           Queries.TradeChat           (findByUser)
 import           Servant
 
 {-|
@@ -106,6 +107,7 @@ data UserMeta = UserMeta
     , photo       :: Maybe (Entity Photo)
     , coordinates :: Maybe Coords
     , offers      :: [OfferResponse]
+    , tradeChats  :: [Int64]
     } deriving (Eq, Show, Generic)
 
 instance ToJSON UserMeta
@@ -185,6 +187,7 @@ getUserMeta userId = do
     mbUser <- getUser userId
     mbPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< mbUser)
     offers <- getOffers userId
+    tradeChats <- findByUser (toSqlKey userId)
     case mbUser of
         Nothing -> throwError $ apiErr (E404, UserNotFound userId)
         Just User {..} ->
@@ -198,6 +201,7 @@ getUserMeta userId = do
               , photo = liftA2 Entity userPhotoId mbPhoto
               , coordinates = userCoordinates
               , offers = offers
+              , tradeChats = fromSqlKey <$> tradeChats
               }
 
 validateUser :: UserRequest -> Either ApiErr UserRequest
