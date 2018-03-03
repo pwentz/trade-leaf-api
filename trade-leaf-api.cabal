@@ -44,6 +44,7 @@ library
       , Api.Auth
       , Api.Error
       , Api.Match
+      , Api.Message
       , Api.Offer
       , Api.Photo
       , Api.Request
@@ -110,6 +111,7 @@ test-suite trade-leaf-api-test
         SpecHelper
       , Api.ErrorSpec
       , Api.MatchSpec
+      , Api.MessageSpec
       , Api.OfferSpec
       , Api.PhotoSpec
       , Api.RequestSpec

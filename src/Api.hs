@@ -8,6 +8,7 @@ module Api
 import           Api.Auth                         (AuthAPI, authHandler,
                                                    authServer)
 import           Api.Match                        (MatchAPI, matchServer)
+import           Api.Message                      (MessageAPI, messageServer)
 import           Api.Photo                        (PhotoAPI, photoServer)
 import           Api.Trade                        (TradeAPI, tradeServer)
 import           Api.TradeChat                    (TradeChatAPI,
@@ -46,11 +47,14 @@ appToTradeServer cfg = enter (convertApp cfg >>> NT Handler) tradeServer
 appToTradeChatServer :: Config -> Server TradeChatAPI
 appToTradeChatServer cfg = enter (convertApp cfg >>> NT Handler) tradeChatServer
 
+appToMessageServer :: Config -> Server MessageAPI
+appToMessageServer cfg = enter (convertApp cfg >>> NT Handler) messageServer
+
 convertApp :: Config -> App :~> ExceptT ServantErr IO
 convertApp cfg = runReaderTNat cfg <<< NT runApp
 
 type AppAPI
-   = UserAPI :<|> AuthAPI :<|> PhotoAPI :<|> MatchAPI :<|> TradeAPI :<|> TradeChatAPI
+  = UserAPI :<|> AuthAPI :<|> PhotoAPI :<|> MatchAPI :<|> TradeAPI :<|> TradeChatAPI :<|> MessageAPI
 
 appApi :: Proxy AppAPI
 appApi = Proxy
@@ -66,4 +70,5 @@ app cfg =
     (appToServer cfg :<|> appToAuthServer cfg :<|> appToPhotoServer cfg :<|>
      appToMatchServer cfg :<|>
      appToTradeServer cfg :<|>
-     appToTradeChatServer cfg)
+     appToTradeChatServer cfg :<|>
+     appToMessageServer cfg)

@@ -4,12 +4,6 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Time              (UTCTime(..), getCurrentTime, fromGregorian, secondsToDiffTime)
 import qualified Database.Persist.Sql   as Sql
 import qualified Db.Main                as Db
-import           Models.Category
-import           Models.Offer
-import           Models.Photo
-import           Models.Trade
-import           Models.TradeChat
-import           Models.User
 import           Queries.Message
 import qualified SpecHelper             as Spec
 import           Test.Hspec
