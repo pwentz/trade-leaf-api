@@ -1,0 +1,14 @@
+Description: Creates Message table.
+Created: 2018-03-02 23:44:46.781639 UTC
+Depends: create-trade-chat create-user
+Apply: |
+  CREATE TABLE "message" (
+    "id" SERIAL8 PRIMARY KEY UNIQUE,
+    "trade_chat_id" INT8 REFERENCES "trade_chat" NOT NULL,
+    "sender_id" INT8 REFERENCES "user" NOT NULL,
+    "content" VARCHAR(250) NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+Revert: |
+  DROP TABLE "message"
