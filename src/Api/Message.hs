@@ -15,6 +15,7 @@ import qualified Database.Persist.Sql   as Sql
 import qualified Db.Main                as Db
 import           GHC.Generics           (Generic)
 import           Models.Message
+import Models.User
 import           Servant
 
 data MessageRequest = MessageRequest
@@ -32,7 +33,7 @@ messageServer :: ServerT MessageAPI App
 messageServer = createMessage
 
 createMessage :: MessageRequest -> App Int64
-createMessage MessageRequest {..} = do
+createMessage MessageRequest{..} = do
   time <- liftIO getCurrentTime
   eitherMsg <-
     Db.runSafe $

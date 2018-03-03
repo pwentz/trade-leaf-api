@@ -66,6 +66,7 @@ library
       , Queries.Offer
       , Queries.Request
       , Queries.Trade
+      , Queries.TradeChat
       , Queries.User
       , Utils
     build-depends:
@@ -124,6 +125,7 @@ test-suite trade-leaf-api-test
       , Queries.OfferSpec
       , Queries.RequestSpec
       , Queries.TradeSpec
+      , Queries.TradeChatSpec
       , Queries.UserSpec
       , UtilsSpec
     build-depends:
