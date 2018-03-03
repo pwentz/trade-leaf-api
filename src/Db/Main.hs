@@ -10,6 +10,7 @@ import           Control.Monad.Catch  (catch)
 import           Control.Monad.Reader
 import           Database.Persist.Sql
 import qualified Models.Category      as Category
+import qualified Models.Message       as Msg
 import qualified Models.Offer         as Offer
 import qualified Models.Photo         as Photo
 import qualified Models.Request       as Request
@@ -26,6 +27,7 @@ doMigrations = do
   runMigration Request.migrateAll
   runMigration Trade.migrateAll
   runMigration TradeChat.migrateAll
+  runMigration Msg.migrateAll
 
 run :: (MonadReader Config m, MonadIO m) => SqlPersistT IO b -> m b
 run query = do

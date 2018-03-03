@@ -41,13 +41,3 @@ findExchange offerKey =
     on (trades ^. TradeExchangeOfferId ==. offers ^. OfferId)
     where_ (trades ^. TradeExchangeOfferId ==. val offerKey)
     return trades
-
-findTradeChat :: Pg.Key Trade -> App (Maybe (Pg.Entity TradeChat))
-findTradeChat tradeKey = sHead <$> foundTradeChat
-  where
-    foundTradeChat =
-      Db.run $
-      select $
-      from $ \(trades `InnerJoin` tradeChats) -> do
-        on (trades ^. TradeId ==. tradeChats ^. TradeChatTradeId)
-        return tradeChats

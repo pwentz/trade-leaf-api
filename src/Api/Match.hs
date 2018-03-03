@@ -9,7 +9,7 @@ import           Api.Offer            (OfferResponse (id), toOfferResponse)
 import           Api.User             (UserMeta (..), getUserMeta)
 import           Config               (App)
 import           Control.Applicative  (liftA2)
-import Control.Monad (join)
+import           Control.Monad        (join)
 import           Data.Aeson           (ToJSON)
 import           Data.Coords          (distanceInMiles)
 import           Data.List            (nub)
@@ -20,7 +20,8 @@ import           Models.Offer
 import           Models.Trade
 import           Models.User
 import           Queries.Match
-import           Queries.Trade        (findAccepted, findExchange, findTradeChat)
+import           Queries.Trade        (findAccepted, findExchange)
+import           Queries.TradeChat    (findByTrade)
 import           Queries.User         (findByUsername)
 import           Servant
 import           Utils
@@ -102,7 +103,7 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
                   else acc
     isAcceptedUserTradeMutual :: Maybe (Sql.Entity Trade) -> App Bool
     isAcceptedUserTradeMutual trade =
-        maybe False (const True) . join <$> traverse (findTradeChat . Sql.entityKey) trade
+        maybe False (const True) . join <$> traverse (findByTrade . Sql.entityKey) trade
     acceptedExchangeOffer :: Sql.Entity Trade -> [OfferResponse] -> [ExchangeOffer]
     acceptedExchangeOffer acceptedTrade =
       let

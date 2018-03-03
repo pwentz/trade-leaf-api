@@ -12,6 +12,7 @@ import           Data.Time                   (UTCTime, getCurrentTime)
 import qualified Database.Persist.Postgresql as Pg
 import qualified Db.Main                     as Db
 import           Models.Category
+import           Models.Message
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
@@ -39,6 +40,7 @@ setupTeardown runTestsWith = do
     migrateDb = Pg.runSqlPool Db.doMigrations
     cleanDb :: Pg.ConnectionPool -> IO ()
     cleanDb pool = do
+        Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Message])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Request])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter TradeChat])) pool
         Pg.runSqlPool (Pg.deleteWhere ([] :: [Pg.Filter Trade])) pool
@@ -147,4 +149,18 @@ newTradeChat tradeKey time =
     { tradeChatTradeId = tradeKey
     , tradeChatCreatedAt = time
     , tradeChatUpdatedAt = time
+    }
+
+createMessage :: Pg.Key TradeChat -> Pg.Key User -> String -> UTCTime -> App (Pg.Key Message)
+createMessage tradeChatKey senderKey content time =
+  Db.run $ Pg.insert (newMessage tradeChatKey senderKey content time)
+
+newMessage :: Pg.Key TradeChat -> Pg.Key User -> String -> UTCTime -> Message
+newMessage tradeChatKey senderKey content time =
+  Message
+    { messageTradeChatId = tradeChatKey
+    , messageSenderId = senderKey
+    , messageContent = content
+    , messageCreatedAt = time
+    , messageUpdatedAt = time
     }

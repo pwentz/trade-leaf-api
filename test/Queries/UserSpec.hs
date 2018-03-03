@@ -13,12 +13,13 @@ import           Test.QuickCheck
 spec :: Spec
 spec =
   around Spec.setupTeardown $
-  describe "Queries.User" $
-  it "can get a given user by their username" $ \config -> do
-    time <- liftIO getCurrentTime
-    requestedUser <-
-      Spec.runAppToIO config $ do
-        userKey <-
-          Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
-        findByUsername "pwentz"
-    userUsername . Pg.entityVal <$> requestedUser `shouldBe` Just "pwentz"
+    describe "Queries.User" $ do
+      context "findByUsername" $
+        it "can get a given user by their username" $ \config -> do
+          time <- liftIO getCurrentTime
+          requestedUser <-
+            Spec.runAppToIO config $ do
+              userKey <-
+                Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+              findByUsername "pwentz"
+          userUsername . Pg.entityVal <$> requestedUser `shouldBe` Just "pwentz"
