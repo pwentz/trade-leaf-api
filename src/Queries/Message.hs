@@ -16,5 +16,3 @@ getMessages tradeChatKey =
           where_ (tradeChats ^. TradeChatId ==. val tradeChatKey)
           orderBy [asc (messages ^. MessageCreatedAt)]
           return messages
-
-
