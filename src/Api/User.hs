@@ -37,44 +37,6 @@ import           Models.User
 import           Queries.TradeChat           (findByUser)
 import           Servant
 
-{-|
-      -- PHOTO --
-  {
-    "id": Int64,
-    "cloudinaryId": Maybe String,
-    "imageUrl": String
-  }
-      -- REQUEST --
-  {
-      "id": Int64,
-      "offerId": Int64,
-      "category": String,
-      "description": String
-  }
-
-      -- OFFER --
-  {
-      "id": Int64,
-      "userId": Int64,
-      "description": String,
-      "category": String,
-      "request": REQUEST,
-      "photo": PHOTO
-  }
-
-      -- USER --
-  {
-      "id": Int64,
-      "firstName": String,
-      "lastName": String,
-      "email": String,
-      "username": String,
-      "photo": PHOTO,
-      "coordinates": { "lat": Double, "lng": Double },
-      "offers": [OFFER]
-  }
--}
-
 data UserRequest = UserRequest
     { firstName   :: String
     , lastName    :: String
