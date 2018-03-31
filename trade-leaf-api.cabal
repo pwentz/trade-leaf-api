@@ -100,6 +100,7 @@ library
       , dbmigrations
       , esqueleto
       , gps
+      , containers
 
 test-suite trade-leaf-api-test
     type:
@@ -140,6 +141,7 @@ test-suite trade-leaf-api-test
       , servant-server
       , esqueleto
       , time
+      , containers
     ghc-options:
         -threaded -rtsopts -with-rtsopts=-N
     default-language:
