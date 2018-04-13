@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric         #-}
 module Queries.TradeChat where
 
 import           Config               (App)
@@ -14,11 +15,12 @@ import           Models.TradeChat
 import           Models.User
 import qualified Queries.Message      as MsgQuery
 import           Utils                (sHead)
+import GHC.Generics (Generic)
 
 data ChatData =
   ChatData { recipient :: Int64
            , messages  :: [Sql.Entity Message]
-           } deriving (Eq, Show)
+           } deriving (Eq, Show, Generic)
 
 findByTrade :: Sql.Key Trade -> App (Maybe (Sql.Entity TradeChat))
 findByTrade tradeKey = sHead <$> foundTradeChat

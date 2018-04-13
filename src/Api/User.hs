@@ -35,6 +35,7 @@ import           Models.Offer
 import           Models.Photo
 import           Models.User
 import           Queries.TradeChat           (findByUser)
+import qualified Queries.User                as Query
 import           Servant
 
 data UserRequest = UserRequest
@@ -81,9 +82,6 @@ type UserAPI
 userServer :: ServerT UserAPI App
 userServer = getUserMeta :<|> createUser :<|> patchUser
 
-getUser :: Int64 -> App (Maybe User)
-getUser = Db.run . get . toSqlKey
-
 createUser :: UserRequest -> App Int64
 createUser userReq@UserRequest {..} =
     case validateUser userReq of
@@ -118,7 +116,7 @@ createUser userReq@UserRequest {..} =
 
 patchUser :: Int64 -> UserPatchRequest -> User -> App ()
 patchUser userId UserPatchRequest {..} user = do
-    requestedUser <- getUser userId
+    requestedUser <- Query.get userId
     if fromMaybe False ((== user) <$> requestedUser)
         then do
             traverse updateFirstName firstName
@@ -145,7 +143,7 @@ patchUser userId UserPatchRequest {..} user = do
 
 getUserMeta :: Int64 -> App UserMeta
 getUserMeta userId = do
-    mbUser <- getUser userId
+    mbUser <- Query.get userId
     mbPhoto <- join <$> traverse (Db.run . get) (userPhotoId =<< mbUser)
     offers <- getOffers userId
     case mbUser of
