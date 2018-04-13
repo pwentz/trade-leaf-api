@@ -18,7 +18,7 @@ import           Api.Offer                   (OfferResponse (description))
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
 import           Api.User                    (UserMeta (..), UserPatchRequest (UserPatchRequest),
                                               UserRequest (UserRequest),
-                                              createUser, getUser, getUserMeta,
+                                              createUser, getUserMeta,
                                               patchUser)
 import           Data.Coords                 (Coords (Coords))
 import           Data.Time                   (UTCTime, getCurrentTime)
