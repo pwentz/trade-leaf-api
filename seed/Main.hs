@@ -80,4 +80,5 @@ seedDb config =
     currentUserRequest3Key <- Db.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
     currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
     currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
+    tradeKey <- Db.createTrade currentUserOffer2Key user4OfferKey False time
     return ()
