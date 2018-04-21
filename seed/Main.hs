@@ -54,6 +54,9 @@ seedDb config =
   runAppToIO config $ do
     time <- liftIO getCurrentTime
     photoKey <- Db.createPhoto "" time
+    fingerPaintingPupPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638923/finger-painting-dog_vm26xw.jpg" time
+    waterColorPaintingPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1512865187/c075786ba959a19c4b49abec03bc5d3c_ggvnvx.jpg" time
+    manInRainPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638661/rain-watercolor_kunesi.jpg" time
     woodworkingCategoryKey <- Db.createCategory "woodworking" time
     artCategoryKey <- Db.createCategory "decorative art" time
     currentUserKey <- Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time
@@ -61,15 +64,15 @@ seedDb config =
     currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
     {-| 6 miles from currentUser -}
     user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time
-    user2OfferKey <- Db.createOffer user2Key artCategoryKey photoKey "water color 30x40 painting" 10 time
+    user2OfferKey <- Db.createOffer user2Key artCategoryKey waterColorPaintingKey "water color 30x40 painting" 10 time
     user2OfferRequestKey <- Db.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
     {-| 14 miles from currentUser -}
     user3Key <- Db.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time
-    user3OfferKey <- Db.createOffer user3Key artCategoryKey photoKey "finger painting dog with lots of colors" 10 time
+    user3OfferKey <- Db.createOffer user3Key artCategoryKey fingerPaintingPupPhotoKey "finger painting dog with lots of colors" 10 time
     user3OfferRequestKey <- Db.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
     {-| 9 miles from currentUser -}
     user4Key <- Db.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time
-    user4OfferKey <- Db.createOffer user4Key artCategoryKey photoKey "man in rain - watercolor" 10 time
+    user4OfferKey <- Db.createOffer user4Key artCategoryKey manInRainPhotoKey "man in rain - watercolor" 10 time
     user4OfferRequestKey <- Db.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
     currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
     currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
