@@ -53,34 +53,44 @@ spec :: Spec
 spec =
   around Spec.setupTeardown $
   describe "Queries.Trade" $ do
-    it "findFromOffers" $ \config -> do
-      DbSetup {..} <- Spec.runAppToIO config dbSetup
-      (foundTradeKey, existingTradeKey) <-
-        Spec.runAppToIO config $ do
-          time <- liftIO getCurrentTime
-          tradeKey <- Spec.createTrade offer1Key offer2Key False time
-          foundTrade <- findFromOffers offer2Key offer1Key
-          return (Pg.entityKey <$> foundTrade, tradeKey)
-      foundTradeKey `shouldBe` Just existingTradeKey
-    it "findAccepted" $ \config -> do
-      DbSetup {..} <- Spec.runAppToIO config dbSetup
-      (foundTrades, expectedTrades) <-
-        Spec.runAppToIO config $ do
-          time <- liftIO getCurrentTime
-          trade1Key <- Spec.createTrade offer1Key offer4Key False time
-          trade2Key <- Spec.createTrade offer3Key offer2Key False time
-          trade3Key <- Spec.createTrade offer1Key offer3Key False time
-          foundTrades <- findAccepted offer1Key
-          return (Pg.entityKey <$> foundTrades, [trade3Key, trade1Key])
-      foundTrades `shouldMatchList` expectedTrades
-    it "findExchange" $ \config -> do
-      DbSetup {..} <- Spec.runAppToIO config dbSetup
-      (foundTrades, expectedTrades) <-
-        Spec.runAppToIO config $ do
-          time <- liftIO getCurrentTime
-          trade1Key <- Spec.createTrade offer3Key offer4Key False time
-          trade2Key <- Spec.createTrade offer2Key offer1Key False time
-          trade3Key <- Spec.createTrade offer3Key offer1Key False time
-          foundTrades <- findExchange offer1Key
-          return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
-      foundTrades `shouldMatchList` expectedTrades
+    context "findFromOffers" $ do
+      it "finds trade with given accepted and exchange offer" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        (foundTradeKey, existingTradeKey) <-
+          Spec.runAppToIO config $ do
+            time <- liftIO getCurrentTime
+            tradeKey <- Spec.createTrade offer1Key offer2Key False time
+            foundTrade <- findFromOffers offer1Key offer2Key
+            return (Pg.entityKey <$> foundTrade, tradeKey)
+        foundTradeKey `shouldBe` Just existingTradeKey
+      it "only finds trade where first offer is accepted and second offer is exchange" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        foundTrade <- Spec.runAppToIO config $ do
+            time <- liftIO getCurrentTime
+            tradeKey <- Spec.createTrade offer1Key offer2Key False time
+            findFromOffers offer2Key offer1Key
+        foundTrade `shouldBe` Nothing
+    context "findAccepted" $
+      it "finds all trades where given offer is accepted offer" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        (foundTrades, expectedTrades) <-
+          Spec.runAppToIO config $ do
+            time <- liftIO getCurrentTime
+            trade1Key <- Spec.createTrade offer1Key offer4Key False time
+            trade2Key <- Spec.createTrade offer3Key offer2Key False time
+            trade3Key <- Spec.createTrade offer1Key offer3Key False time
+            foundTrades <- findAccepted offer1Key
+            return (Pg.entityKey <$> foundTrades, [trade3Key, trade1Key])
+        foundTrades `shouldMatchList` expectedTrades
+    context "findExchange" $
+      it "finds all trades where given offer is exchange offer" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        (foundTrades, expectedTrades) <-
+          Spec.runAppToIO config $ do
+            time <- liftIO getCurrentTime
+            trade1Key <- Spec.createTrade offer3Key offer4Key False time
+            trade2Key <- Spec.createTrade offer2Key offer1Key False time
+            trade3Key <- Spec.createTrade offer3Key offer1Key False time
+            foundTrades <- findExchange offer1Key
+            return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
+        foundTrades `shouldMatchList` expectedTrades
