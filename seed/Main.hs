@@ -64,15 +64,15 @@ seedDb config =
     currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
     {-| 6 miles from currentUser -}
     user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time
-    user2OfferKey <- Db.createOffer user2Key artCategoryKey waterColorPaintingKey "water color 30x40 painting" 10 time
+    user2OfferKey <- Db.createOffer user2Key artCategoryKey waterColorPaintingPhotoKey "water color 30x40 painting" 999 time
     user2OfferRequestKey <- Db.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
     {-| 14 miles from currentUser -}
     user3Key <- Db.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time
-    user3OfferKey <- Db.createOffer user3Key artCategoryKey fingerPaintingPupPhotoKey "finger painting dog with lots of colors" 10 time
+    user3OfferKey <- Db.createOffer user3Key artCategoryKey fingerPaintingPupPhotoKey "finger painting dog with lots of colors" 999 time
     user3OfferRequestKey <- Db.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
     {-| 9 miles from currentUser -}
     user4Key <- Db.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time
-    user4OfferKey <- Db.createOffer user4Key artCategoryKey manInRainPhotoKey "man in rain - watercolor" 10 time
+    user4OfferKey <- Db.createOffer user4Key artCategoryKey manInRainPhotoKey "man in rain - watercolor" 999 time
     user4OfferRequestKey <- Db.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
     currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
     currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
