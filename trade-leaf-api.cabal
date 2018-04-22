@@ -46,6 +46,7 @@ executable seed-db
       , monad-control
       , transformers
       , mtl
+      , bytestring
 
 library
     default-language:
