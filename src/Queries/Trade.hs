@@ -10,18 +10,15 @@ import           Models.TradeChat
 import           Utils                       (sHead)
 
 findFromOffers :: Pg.Key Offer -> Pg.Key Offer -> App (Maybe (Pg.Entity Trade))
-findFromOffers offer1Key offer2Key = sHead <$> foundTrades
+findFromOffers acceptedOfferKey exchangeOfferKey = sHead <$> foundTrades
   where
     foundTrades =
       Db.run $
       select $
       from $ \trades -> do
         where_
-          ((trades ^. TradeAcceptedOfferId ==. val offer1Key) ||.
-           (trades ^. TradeExchangeOfferId ==. val offer1Key))
-        where_
-          ((trades ^. TradeAcceptedOfferId ==. val offer2Key) ||.
-           (trades ^. TradeExchangeOfferId ==. val offer2Key))
+          ((trades ^. TradeAcceptedOfferId ==. val acceptedOfferKey) &&.
+           (trades ^. TradeExchangeOfferId ==. val exchangeOfferKey))
         return trades
 
 findAccepted :: Pg.Key Offer -> App [Pg.Entity Trade]
