@@ -8,9 +8,9 @@ import           Control.Exception    (Exception, SomeException (..),
                                        displayException)
 import           Control.Monad.Catch  (catch)
 import           Control.Monad.Reader
-import           Database.Persist.Sql
+import           Data.Coords
 import           Data.Time            (UTCTime)
-import Data.Coords
+import           Database.Persist.Sql
 import qualified Models.Category      as Category
 import qualified Models.Message       as Msg
 import qualified Models.Offer         as Offer

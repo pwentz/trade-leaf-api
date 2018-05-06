@@ -44,30 +44,30 @@ data DbSetup = DbSetup
 dbSetup :: App DbSetup
 dbSetup = do
     time <- liftIO getCurrentTime
-    photoKey <- Spec.createPhoto "" time
-    woodworkingCategoryKey <- Spec.createCategory "woodworking" time
-    artCategoryKey <- Spec.createCategory "decorative art" time
-    currentUserKey <- Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time
-    currentUserOffer1Key <- Spec.createOffer currentUserKey artCategoryKey photoKey "some painting" 999 time
-    currentUserRequest1Key <- Spec.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
+    photoKey <- Db.createPhoto "" time
+    woodworkingCategoryKey <- Db.createCategory "woodworking" time
+    artCategoryKey <- Db.createCategory "decorative art" time
+    currentUserKey <- Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time
+    currentUserOffer1Key <- Db.createOffer currentUserKey artCategoryKey photoKey "some painting" 999 time
+    currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
     {-| 6 miles from currentUser -}
-    user2Key <- Spec.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time
-    user2OfferKey <- Spec.createOffer user2Key artCategoryKey photoKey "water color 30x40 painting" 10 time
-    user2OfferRequestKey <- Spec.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
+    user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time
+    user2OfferKey <- Db.createOffer user2Key artCategoryKey photoKey "water color 30x40 painting" 10 time
+    user2OfferRequestKey <- Db.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
     {-| 14 miles from currentUser -}
-    user3Key <- Spec.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time
-    user3OfferKey <- Spec.createOffer user3Key artCategoryKey photoKey "finger painting dog with lots of colors" 10 time
-    user3OfferRequestKey <- Spec.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
+    user3Key <- Db.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time
+    user3OfferKey <- Db.createOffer user3Key artCategoryKey photoKey "finger painting dog with lots of colors" 10 time
+    user3OfferRequestKey <- Db.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
     {-| 9 miles from currentUser -}
-    user4Key <- Spec.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time
-    user4OfferKey <- Spec.createOffer user4Key artCategoryKey photoKey "man in rain - watercolor" 10 time
-    user4OfferRequestKey <- Spec.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
-    currentUserOffer2Key <- Spec.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
-    currentUserRequest2Key <- Spec.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
-    currentUserOffer3Key <- Spec.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time
-    currentUserRequest3Key <- Spec.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
-    currentUserOffer4Key <- Spec.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
-    currentUserRequest4Key <- Spec.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
+    user4Key <- Db.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time
+    user4OfferKey <- Db.createOffer user4Key artCategoryKey photoKey "man in rain - watercolor" 10 time
+    user4OfferRequestKey <- Db.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
+    currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
+    currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
+    currentUserOffer3Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time
+    currentUserRequest3Key <- Db.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
+    currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
+    currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
     return DbSetup
             { currentUserKey = currentUserKey
             , currentUserOffer1Key = currentUserOffer1Key
@@ -98,8 +98,8 @@ spec =
                 , currentUserOffer4Key
                 ]
           in do time <- liftIO getCurrentTime
-                tradeKey <- Spec.createTrade user2OfferKey currentUserOffer1Key False time
-                tradeChatKey <- Spec.createTradeChat tradeKey time
+                tradeKey <- Db.createTrade user2OfferKey currentUserOffer1Key False time
+                tradeChatKey <- Db.createTradeChat tradeKey time
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -117,9 +117,9 @@ spec =
                 ]
           in do time <- liftIO getCurrentTime
                 tradeKey <-
-                  Spec.createTrade currentUserOffer1Key user2OfferKey False time
-                _ <- Spec.createTrade currentUserOffer2Key currentUserOffer3Key False time
-                tradeChatKey <- Spec.createTradeChat tradeKey time
+                  Db.createTrade currentUserOffer1Key user2OfferKey False time
+                _ <- Db.createTrade currentUserOffer2Key currentUserOffer3Key False time
+                tradeChatKey <- Db.createTradeChat tradeKey time
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -138,8 +138,8 @@ spec =
                 , currentUserOffer4Key
                 ]
           in do time <- liftIO getCurrentTime
-                trade1Key <- Spec.createTrade currentUserOffer2Key user4OfferKey False time
-                trade2Key <- Spec.createTrade currentUserOffer3Key user2OfferKey False time
+                trade1Key <- Db.createTrade currentUserOffer2Key user4OfferKey False time
+                trade2Key <- Db.createTrade currentUserOffer3Key user2OfferKey False time
                 mbOffer <- (Sql.Entity user4OfferKey <$>) <$> Db.run (Sql.get user4OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
@@ -169,8 +169,8 @@ spec =
             DbSetup {..} <- dbSetup
             currentUser <- Db.run (Sql.get currentUserKey)
             tradeKey <-
-              Spec.createTrade user2OfferKey currentUserOffer1Key False time
-            tradeChatKey <- Spec.createTradeChat tradeKey time
+              Db.createTrade user2OfferKey currentUserOffer1Key False time
+            tradeChatKey <- Db.createTradeChat tradeKey time
             traverse getMatches currentUser
         (((\MatchResponse {..} -> description offer) <$>) <$> matches) `shouldBe`
           Just ["man in rain - watercolor"]
@@ -186,7 +186,7 @@ spec =
                   time <- liftIO getCurrentTime
                   DbSetup {..} <- dbSetup
                   currentUser <- Db.run (Sql.get currentUserKey)
-                  tradeKey <- Spec.createTrade currentUserOffer1Key user2OfferKey False time
+                  tradeKey <- Db.createTrade currentUserOffer1Key user2OfferKey False time
                   traverse getMatches currentUser
               (fmap (\MatchResponse {..} -> description offer) <$> matches) `shouldBe`
                 Just ["water color 30x40 painting", "man in rain - watercolor"]
@@ -205,12 +205,12 @@ spec =
                   DbSetup {..} <- dbSetup
                   currentUser <- Db.run (Sql.get currentUserKey)
                   tradeKey <-
-                    Spec.createTrade
+                    Db.createTrade
                       currentUserOffer1Key
                       user2OfferKey
                       False
                       time
-                  tradeChatKey <- Spec.createTradeChat tradeKey time
+                  tradeChatKey <- Db.createTradeChat tradeKey time
                   traverse getMatches currentUser
               (((\MatchResponse {..} -> description offer) <$>) <$> matches) `shouldBe`
                 Just ["man in rain - watercolor"]

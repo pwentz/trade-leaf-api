@@ -28,13 +28,13 @@ spec =
           in do (newTradeChat, tradeKey, tradeChatCount) <-
                   Spec.runAppToIO config $ do
                     time <- liftIO getCurrentTime
-                    photoKey <- Spec.createPhoto "cat.png" time
+                    photoKey <- Db.createPhoto "cat.png" time
                     userKey <-
-                      Spec.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
-                    categoryKey <- Spec.createCategory "tutor" time
-                    offer1Key <- Spec.createOffer userKey categoryKey photoKey "chemistry" 1 time
-                    offer2Key <- Spec.createOffer userKey categoryKey photoKey "history" 1 time
-                    tradeKey <- Spec.createTrade offer1Key offer2Key False time
+                      Db.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+                    categoryKey <- Db.createCategory "tutor" time
+                    offer1Key <- Db.createOffer userKey categoryKey photoKey "chemistry" 1 time
+                    offer2Key <- Db.createOffer userKey categoryKey photoKey "history" 1 time
+                    tradeKey <- Db.createTrade offer1Key offer2Key False time
                     tradeChatKey <- createTradeChat (tradeChatReq tradeKey)
                     mbTradeChat <- Db.run $ Pg.get (Pg.toSqlKey tradeChatKey :: Pg.Key TradeChat)
                     tradeChatCount <- Db.run $ Pg.count ([] :: [Pg.Filter TradeChat])
@@ -45,13 +45,13 @@ spec =
         it "throws if passed a user that does not match " $ \config ->
           let
             currentUser time =
-              Spec.newUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+              Db.newUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
           in do
           (randomUserId, authedUser) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            photoKey <- Spec.createPhoto "cat.png" time
+            photoKey <- Db.createPhoto "cat.png" time
             userKey <- Db.run $ Pg.insert (currentUser time)
             randomUserKey <-
-              Spec.createUser "fred" "jones" "fj@gmail.com" "fjones1" "pass" Nothing Nothing time
+              Db.createUser "fred" "jones" "fj@gmail.com" "fjones1" "pass" Nothing Nothing time
             return (Pg.fromSqlKey randomUserKey, currentUser time)
           Spec.runAppToIO config (fetchChatData randomUserId authedUser) `shouldThrow` (== apiErr (E401, RequestedUserNotAuth))

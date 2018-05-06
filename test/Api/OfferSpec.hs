@@ -37,17 +37,17 @@ data DbSetup = DbSetup
 dbSetup :: App DbSetup
 dbSetup = do
   time <- liftIO getCurrentTime
-  photo1Key <- Spec.createPhoto "https://dog.png" time
-  photo2Key <- Spec.createPhoto "https://cat.png" time
-  handyCatKey <- Spec.createCategory "handywork" time
-  artCatKey <- Spec.createCategory "decorative art" time
-  babySitterCatKey <- Spec.createCategory "baby sitter" time
-  tutorCatKey <- Spec.createCategory "physics tutor" time
-  user1Key <- Spec.createUser "jared" "johnson" "jj@yahoo.com" "jj1" "pass" Nothing Nothing time
-  offer1Key <- Spec.createOffer user1Key artCatKey photo1Key "painting" 999 time
-  req1Key <- Spec.createRequest offer1Key handyCatKey "sand fence plz" time
-  offer2Key <- Spec.createOffer user1Key babySitterCatKey photo2Key "i sit baby" 10 time
-  req2Key <- Spec.createRequest offer2Key tutorCatKey "plz tutor me" time
+  photo1Key <- Db.createPhoto "https://dog.png" time
+  photo2Key <- Db.createPhoto "https://cat.png" time
+  handyCatKey <- Db.createCategory "handywork" time
+  artCatKey <- Db.createCategory "decorative art" time
+  babySitterCatKey <- Db.createCategory "baby sitter" time
+  tutorCatKey <- Db.createCategory "physics tutor" time
+  user1Key <- Db.createUser "jared" "johnson" "jj@yahoo.com" "jj1" "pass" Nothing Nothing time
+  offer1Key <- Db.createOffer user1Key artCatKey photo1Key "painting" 999 time
+  req1Key <- Db.createRequest offer1Key handyCatKey "sand fence plz" time
+  offer2Key <- Db.createOffer user1Key babySitterCatKey photo2Key "i sit baby" 10 time
+  req2Key <- Db.createRequest offer2Key tutorCatKey "plz tutor me" time
   return
     DbSetup
     { userKey = user1Key
@@ -60,10 +60,10 @@ dbSetup = do
     }
 
 photo1 :: UTCTime -> Photo
-photo1 time = Spec.newPhoto "https://dog.png" time
+photo1 time = Db.newPhoto "https://dog.png" time
 
 photo2 :: UTCTime -> Photo
-photo2 time = Spec.newPhoto "https://cat.png" time
+photo2 time = Db.newPhoto "https://cat.png" time
 
 spec :: Spec
 spec =

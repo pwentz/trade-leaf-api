@@ -32,10 +32,10 @@ data DbSetup = DbSetup
 dbSetup :: App DbSetup
 dbSetup = do
   time <- liftIO getCurrentTime
-  photoKey <- Spec.createPhoto "cat.png" time
-  categoryKey <- Spec.createCategory "tutor" time
+  photoKey <- Db.createPhoto "cat.png" time
+  categoryKey <- Db.createCategory "tutor" time
   userKey <-
-    Spec.createUser
+    Db.createUser
       "Doug"
       "Stamper"
       "dougiestamps@yahoo.com"
@@ -44,9 +44,9 @@ dbSetup = do
       Nothing
       Nothing
       time
-  offer1Key <- Spec.createOffer userKey categoryKey photoKey "physics" 1 time
-  offer2Key <- Spec.createOffer userKey categoryKey photoKey "chem" 1 time
-  offer3Key <- Spec.createOffer userKey categoryKey photoKey "biology" 1 time
+  offer1Key <- Db.createOffer userKey categoryKey photoKey "physics" 1 time
+  offer2Key <- Db.createOffer userKey categoryKey photoKey "chem" 1 time
+  offer3Key <- Db.createOffer userKey categoryKey photoKey "biology" 1 time
   return (DbSetup photoKey categoryKey userKey offer1Key offer2Key offer3Key)
 
 spec :: Spec
@@ -72,8 +72,8 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            targetTrade <- Spec.createTrade offer1Key offer2Key True time
-            otherTrade <- Spec.createTrade offer2Key offer1Key True time
+            targetTrade <- Db.createTrade offer1Key offer2Key True time
+            otherTrade <- Db.createTrade offer2Key offer1Key True time
             foundTrade <- getTrade (Just $ Pg.fromSqlKey offer1Key) (Just $ Pg.fromSqlKey offer2Key)
             return foundTrade
         tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
@@ -83,8 +83,8 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            firstTrade <- Spec.createTrade offer1Key offer2Key True time
-            nextTrade <- Spec.createTrade offer1Key offer3Key True time
+            firstTrade <- Db.createTrade offer1Key offer2Key True time
+            nextTrade <- Db.createTrade offer1Key offer3Key True time
             getTrade (Just $ Pg.fromSqlKey offer1Key) Nothing
         tradeAcceptedOfferId . Pg.entityVal <$> trade `shouldBe` Just offer1Key
         tradeExchangeOfferId . Pg.entityVal <$> trade `shouldBe` Just offer2Key
@@ -97,8 +97,8 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeKey <- Spec.createTrade offer1Key offer2Key True time
-            tradeChatKey <- Spec.createTradeChat tradeKey time
+            tradeKey <- Db.createTrade offer1Key offer2Key True time
+            tradeChatKey <- Db.createTradeChat tradeKey time
             _ <-
               patchTrade (Pg.fromSqlKey tradeKey) $
               TradePatchReq
@@ -114,7 +114,7 @@ spec =
         trade <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeKey <- Spec.createTrade offer1Key offer2Key True time
+            tradeKey <- Db.createTrade offer1Key offer2Key True time
             _ <-
               patchTrade (Pg.fromSqlKey tradeKey) $
               TradePatchReq (Just False) Nothing (Just (Pg.fromSqlKey offer3Key))

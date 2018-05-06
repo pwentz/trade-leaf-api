@@ -24,16 +24,16 @@ spec =
         it "finds a trade chat for a given trade" $ \config -> do
           (foundTradeChat, tradeChatKey) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            categoryKey <- Spec.createCategory "tutoring" time
-            photoKey <- Spec.createPhoto "dog.png" time
+            categoryKey <- Db.createCategory "tutoring" time
+            photoKey <- Db.createPhoto "dog.png" time
             user1Key <-
-              Spec.createUser "fred" "johnson" "fred@gmail.com" "freddy" "password" Nothing Nothing time
+              Db.createUser "fred" "johnson" "fred@gmail.com" "freddy" "password" Nothing Nothing time
             user2Key <-
-              Spec.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
-            user1Offer <- Spec.createOffer user1Key categoryKey photoKey "math" 99 time
-            user2Offer <- Spec.createOffer user2Key categoryKey photoKey "physics" 99 time
-            tradeKey <- Spec.createTrade user1Offer user2Offer False time
-            tradeChatKey <- Spec.createTradeChat tradeKey time
+              Db.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
+            user1Offer <- Db.createOffer user1Key categoryKey photoKey "math" 99 time
+            user2Offer <- Db.createOffer user2Key categoryKey photoKey "physics" 99 time
+            tradeKey <- Db.createTrade user1Offer user2Offer False time
+            tradeChatKey <- Db.createTradeChat tradeKey time
             foundTradeChat <- findByTrade tradeKey
             return (foundTradeChat, tradeChatKey)
           Sql.entityKey <$> foundTradeChat `shouldBe` Just tradeChatKey
@@ -41,20 +41,20 @@ spec =
         it "can find all of the trade chats that given user is involved in" $ \config -> do
           (tradeChats, tradeChat1Key, tradeChat2Key) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            photoKey <- Spec.createPhoto "cat.png" time
-            currentUserKey <- Spec.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
-            user2Key <- Spec.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
-            user3Key <- Spec.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
-            categoryKey <- Spec.createCategory "tutor" time
-            currentUserOfferKey <- Spec.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
-            user2OfferKey <- Spec.createOffer user2Key categoryKey photoKey "physics" 1 time
-            user3OfferKey <- Spec.createOffer user3Key categoryKey photoKey "calculus" 1 time
-            trade1Key <- Spec.createTrade currentUserOfferKey user2OfferKey False time
-            tradeChat1Key <- Spec.createTradeChat trade1Key time
-            trade2Key <- Spec.createTrade user3OfferKey currentUserOfferKey False time
-            tradeChat2Key <- Spec.createTradeChat trade2Key time
-            trade3Key <- Spec.createTrade user2OfferKey user3OfferKey False time
-            tradeChat3Key <- Spec.createTradeChat trade3Key time
+            photoKey <- Db.createPhoto "cat.png" time
+            currentUserKey <- Db.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+            user2Key <- Db.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
+            user3Key <- Db.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
+            categoryKey <- Db.createCategory "tutor" time
+            currentUserOfferKey <- Db.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
+            user2OfferKey <- Db.createOffer user2Key categoryKey photoKey "physics" 1 time
+            user3OfferKey <- Db.createOffer user3Key categoryKey photoKey "calculus" 1 time
+            trade1Key <- Db.createTrade currentUserOfferKey user2OfferKey False time
+            tradeChat1Key <- Db.createTradeChat trade1Key time
+            trade2Key <- Db.createTrade user3OfferKey currentUserOfferKey False time
+            tradeChat2Key <- Db.createTradeChat trade2Key time
+            trade3Key <- Db.createTrade user2OfferKey user3OfferKey False time
+            tradeChat3Key <- Db.createTradeChat trade3Key time
             tradeChats <- findByUser currentUserKey
             return (tradeChats, tradeChat1Key, tradeChat2Key)
           tradeChats `shouldBe` [tradeChat1Key, tradeChat2Key]
@@ -62,16 +62,16 @@ spec =
         it "finds the users in a given chat" $ \config -> do
           (recipientKeys, currentUserKey, user2Key) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            photoKey <- Spec.createPhoto "cat.png" time
-            currentUserKey <- Spec.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
-            user2Key <- Spec.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
-            user3Key <- Spec.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
-            categoryKey <- Spec.createCategory "tutor" time
-            currentUserOfferKey <- Spec.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
-            user2OfferKey <- Spec.createOffer user2Key categoryKey photoKey "physics" 1 time
-            user3OfferKey <- Spec.createOffer user3Key categoryKey photoKey "calculus" 1 time
-            trade1Key <- Spec.createTrade currentUserOfferKey user2OfferKey False time
-            tradeChat1Key <- Spec.createTradeChat trade1Key time
+            photoKey <- Db.createPhoto "cat.png" time
+            currentUserKey <- Db.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+            user2Key <- Db.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
+            user3Key <- Db.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
+            categoryKey <- Db.createCategory "tutor" time
+            currentUserOfferKey <- Db.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
+            user2OfferKey <- Db.createOffer user2Key categoryKey photoKey "physics" 1 time
+            user3OfferKey <- Db.createOffer user3Key categoryKey photoKey "calculus" 1 time
+            trade1Key <- Db.createTrade currentUserOfferKey user2OfferKey False time
+            tradeChat1Key <- Db.createTradeChat trade1Key time
             recipientKeys <- findRecipients tradeChat1Key
             return (recipientKeys, currentUserKey, user2Key)
           recipientKeys `shouldBe` (currentUserKey, user2Key)
@@ -94,24 +94,24 @@ spec =
           in do
           (chatData, expectedRes) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            photoKey <- Spec.createPhoto "cat.png" time
-            currentUserKey <- Spec.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
-            user2Key <- Spec.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
-            user3Key <- Spec.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
-            categoryKey <- Spec.createCategory "tutor" time
-            currentUserOfferKey <- Spec.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
-            user2OfferKey <- Spec.createOffer user2Key categoryKey photoKey "physics" 1 time
-            user3OfferKey <- Spec.createOffer user3Key categoryKey photoKey "calculus" 1 time
-            trade1Key <- Spec.createTrade currentUserOfferKey user2OfferKey False time
-            tradeChat1Key <- Spec.createTradeChat trade1Key time
-            trade2Key <- Spec.createTrade user3OfferKey currentUserOfferKey False time
-            tradeChat2Key <- Spec.createTradeChat trade2Key time
-            trade3Key <- Spec.createTrade user2OfferKey user3OfferKey False time
-            tradeChat3Key <- Spec.createTradeChat trade3Key time
-            message1Key <- Spec.createMessage tradeChat1Key currentUserKey "yo fred" time
-            message2Key <- Spec.createMessage tradeChat2Key currentUserKey "yo bill" time
-            message3Key <- Spec.createMessage tradeChat3Key user2Key "hey bill, it's me fred." time
-            message4Key <- Spec.createMessage tradeChat1Key user2Key "hello, ed" time
+            photoKey <- Db.createPhoto "cat.png" time
+            currentUserKey <- Db.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+            user2Key <- Db.createUser "fred" "johnson" "fred@gmail.com" "fredd" "password" Nothing Nothing time
+            user3Key <- Db.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
+            categoryKey <- Db.createCategory "tutor" time
+            currentUserOfferKey <- Db.createOffer currentUserKey categoryKey photoKey "chemistry" 1 time
+            user2OfferKey <- Db.createOffer user2Key categoryKey photoKey "physics" 1 time
+            user3OfferKey <- Db.createOffer user3Key categoryKey photoKey "calculus" 1 time
+            trade1Key <- Db.createTrade currentUserOfferKey user2OfferKey False time
+            tradeChat1Key <- Db.createTradeChat trade1Key time
+            trade2Key <- Db.createTrade user3OfferKey currentUserOfferKey False time
+            tradeChat2Key <- Db.createTradeChat trade2Key time
+            trade3Key <- Db.createTrade user2OfferKey user3OfferKey False time
+            tradeChat3Key <- Db.createTradeChat trade3Key time
+            message1Key <- Db.createMessage tradeChat1Key currentUserKey "yo fred" time
+            message2Key <- Db.createMessage tradeChat2Key currentUserKey "yo bill" time
+            message3Key <- Db.createMessage tradeChat3Key user2Key "hey bill, it's me fred." time
+            message4Key <- Db.createMessage tradeChat1Key user2Key "hello, ed" time
             chatData <- findChatData currentUserKey
             expectedRes <- expected (tradeChat1Key, user2Key, [message1Key, message4Key]) (tradeChat2Key, user3Key, [message2Key])
             return (chatData, expectedRes)

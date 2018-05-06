@@ -20,6 +20,6 @@ spec =
           requestedUser <-
             Spec.runAppToIO config $ do
               userKey <-
-                Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+                Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
               findByUsername "pwentz"
           userUsername . Pg.entityVal <$> requestedUser `shouldBe` Just "pwentz"
