@@ -23,10 +23,10 @@ spec =
     reqRes <-
       Spec.runAppToIO config $ do
         userKey <-
-          Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
-        photoKey <- Spec.createPhoto "dog.png" time
-        categoryKey <- Spec.createCategory "tutor" time
-        offerKey <- Spec.createOffer userKey categoryKey photoKey "physics" 1 time
-        reqKey <- Spec.createRequest offerKey categoryKey "chemistry" time
+          Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+        photoKey <- Db.createPhoto "dog.png" time
+        categoryKey <- Db.createCategory "tutor" time
+        offerKey <- Db.createOffer userKey categoryKey photoKey "physics" 1 time
+        reqKey <- Db.createRequest offerKey categoryKey "chemistry" time
         getOfferRequest offerKey
     ((requestDescription . Pg.entityVal) <$> reqRes) `shouldBe` Just "chemistry"

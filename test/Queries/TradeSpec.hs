@@ -31,10 +31,10 @@ data DbSetup = DbSetup
 dbSetup :: App DbSetup
 dbSetup = do
   time <- liftIO getCurrentTime
-  photoKey <- Spec.createPhoto "cat.png" time
-  categoryKey <- Spec.createCategory "tutor" time
+  photoKey <- Db.createPhoto "cat.png" time
+  categoryKey <- Db.createCategory "tutor" time
   userKey <-
-    Spec.createUser
+    Db.createUser
       "Doug"
       "Stamper"
       "dougiestamps@yahoo.com"
@@ -43,10 +43,10 @@ dbSetup = do
       Nothing
       Nothing
       time
-  offer1Key <- Spec.createOffer userKey categoryKey photoKey "physics" 1 time
-  offer2Key <- Spec.createOffer userKey categoryKey photoKey "chem" 1 time
-  offer3Key <- Spec.createOffer userKey categoryKey photoKey "biology" 1 time
-  offer4Key <- Spec.createOffer userKey categoryKey photoKey "calculus" 1 time
+  offer1Key <- Db.createOffer userKey categoryKey photoKey "physics" 1 time
+  offer2Key <- Db.createOffer userKey categoryKey photoKey "chem" 1 time
+  offer3Key <- Db.createOffer userKey categoryKey photoKey "biology" 1 time
+  offer4Key <- Db.createOffer userKey categoryKey photoKey "calculus" 1 time
   return (DbSetup photoKey categoryKey userKey offer1Key offer2Key offer3Key offer4Key)
 
 spec :: Spec
@@ -59,7 +59,7 @@ spec =
         (foundTradeKey, existingTradeKey) <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeKey <- Spec.createTrade offer1Key offer2Key False time
+            tradeKey <- Db.createTrade offer1Key offer2Key False time
             foundTrade <- findFromOffers offer1Key offer2Key
             return (Pg.entityKey <$> foundTrade, tradeKey)
         foundTradeKey `shouldBe` Just existingTradeKey
@@ -67,7 +67,7 @@ spec =
         DbSetup {..} <- Spec.runAppToIO config dbSetup
         foundTrade <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            tradeKey <- Spec.createTrade offer1Key offer2Key False time
+            tradeKey <- Db.createTrade offer1Key offer2Key False time
             findFromOffers offer2Key offer1Key
         foundTrade `shouldBe` Nothing
     context "findAccepted" $
@@ -76,9 +76,9 @@ spec =
         (foundTrades, expectedTrades) <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            trade1Key <- Spec.createTrade offer1Key offer4Key False time
-            trade2Key <- Spec.createTrade offer3Key offer2Key False time
-            trade3Key <- Spec.createTrade offer1Key offer3Key False time
+            trade1Key <- Db.createTrade offer1Key offer4Key False time
+            trade2Key <- Db.createTrade offer3Key offer2Key False time
+            trade3Key <- Db.createTrade offer1Key offer3Key False time
             foundTrades <- findAccepted offer1Key
             return (Pg.entityKey <$> foundTrades, [trade3Key, trade1Key])
         foundTrades `shouldMatchList` expectedTrades
@@ -88,9 +88,9 @@ spec =
         (foundTrades, expectedTrades) <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            trade1Key <- Spec.createTrade offer3Key offer4Key False time
-            trade2Key <- Spec.createTrade offer2Key offer1Key False time
-            trade3Key <- Spec.createTrade offer3Key offer1Key False time
+            trade1Key <- Db.createTrade offer3Key offer4Key False time
+            trade2Key <- Db.createTrade offer2Key offer1Key False time
+            trade3Key <- Db.createTrade offer3Key offer1Key False time
             foundTrades <- findExchange offer1Key
             return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
         foundTrades `shouldMatchList` expectedTrades

@@ -60,7 +60,7 @@ spec =
           in Spec.runAppToIO config $ do
                time <- liftIO getCurrentTime
                userKey <-
-                 Spec.createUser
+                 Db.createUser
                    "pat"
                    "wentz"
                    "pat@gmail.com"
@@ -69,7 +69,7 @@ spec =
                    Nothing
                    Nothing
                    time
-               photoKey <- Spec.createPhoto "https://google.com/clown.png" time
+               photoKey <- Db.createPhoto "https://google.com/clown.png" time
                mbUser <- Db.run (Sql.get userKey)
                traverse
                  (patchUser (Sql.fromSqlKey userKey) (patchReq $ Sql.fromSqlKey photoKey))
@@ -89,9 +89,9 @@ spec =
         userMeta <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            photoKey <- Spec.createPhoto "https://google.com/clown.png" time
+            photoKey <- Db.createPhoto "https://google.com/clown.png" time
             userKey <-
-              Spec.createUser
+              Db.createUser
                 "pat"
                 "wentz"
                 "pat@gmail.com"
@@ -100,9 +100,9 @@ spec =
                 (Just photoKey)
                 (Just (Coords 12.345 54.321))
                 time
-            categoryKey <- Spec.createCategory "stuff" time
-            userOfferId1 <- Spec.createOffer userKey categoryKey photoKey "babysitting" 5 time
-            userOfferId2 <- Spec.createOffer userKey categoryKey photoKey "carpentry" 5 time
+            categoryKey <- Db.createCategory "stuff" time
+            userOfferId1 <- Db.createOffer userKey categoryKey photoKey "babysitting" 5 time
+            userOfferId2 <- Db.createOffer userKey categoryKey photoKey "carpentry" 5 time
             getUserMeta (Sql.fromSqlKey userKey)
         username userMeta `shouldBe` "pwentz"
         ((photoImageUrl . Sql.entityVal) <$> photo userMeta) `shouldBe`

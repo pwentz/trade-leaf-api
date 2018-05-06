@@ -26,9 +26,9 @@ spec =
         Spec.runAppToIO config $ do
           time <- liftIO getCurrentTime
           userKey <-
-            Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+            Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
           randomUserKey <-
-            Spec.createUser
+            Db.createUser
               "fred"
               "johnson"
               "fred@gmail.com"
@@ -37,11 +37,11 @@ spec =
               Nothing
               Nothing
               time
-          categoryKey <- Spec.createCategory "something" time
-          photoKey <- Spec.createPhoto "some-image.jpeg" time
-          _ <- Spec.createOffer userKey categoryKey photoKey "baby sitter" 1 time
-          _ <- Spec.createOffer userKey categoryKey photoKey "circus clown" 1 time
-          _ <- Spec.createOffer randomUserKey categoryKey photoKey "carpentry" 1 time
+          categoryKey <- Db.createCategory "something" time
+          photoKey <- Db.createPhoto "some-image.jpeg" time
+          _ <- Db.createOffer userKey categoryKey photoKey "baby sitter" 1 time
+          _ <- Db.createOffer userKey categoryKey photoKey "circus clown" 1 time
+          _ <- Db.createOffer randomUserKey categoryKey photoKey "carpentry" 1 time
           fmap (offerDescription . Sql.entityVal) <$> userOffers userKey
       userOfferDescriptions `shouldBe` ["baby sitter", "circus clown"]
     it "can get the request, category, and photo for a given offer" $ \config -> do
@@ -49,12 +49,12 @@ spec =
         Spec.runAppToIO config $ do
           time <- liftIO getCurrentTime
           userKey <-
-            Spec.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
-          categoryKey <- Spec.createCategory "baby sitter" time
-          otherCategoryKey <- Spec.createCategory "wood working" time
-          photoKey <- Spec.createPhoto "some-image.jpeg" time
-          offerKey <- Spec.createOffer userKey categoryKey photoKey "i sit babies" 1 time
-          offerReq <- Spec.createRequest offerKey otherCategoryKey "some request" time
+            Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing Nothing time
+          categoryKey <- Db.createCategory "baby sitter" time
+          otherCategoryKey <- Db.createCategory "wood working" time
+          photoKey <- Db.createPhoto "some-image.jpeg" time
+          offerKey <- Db.createOffer userKey categoryKey photoKey "i sit babies" 1 time
+          offerReq <- Db.createRequest offerKey otherCategoryKey "some request" time
           mbOffer <- fmap (Sql.Entity offerKey) <$> Db.run (Sql.get offerKey)
           traverse getOfferData mbOffer
       userUsername . Sql.entityVal . first <$> res `shouldBe` Just "pwentz"

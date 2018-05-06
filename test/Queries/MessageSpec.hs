@@ -17,20 +17,20 @@ spec =
         (messages, msg1Key, msg2Key, msg3Key) <-
           Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
-            categoryKey <- Spec.createCategory "tutoring" time
-            photoKey <- Spec.createPhoto "dog.png" time
+            categoryKey <- Db.createCategory "tutoring" time
+            photoKey <- Db.createPhoto "dog.png" time
             user1Key <-
-              Spec.createUser "fred" "johnson" "fred@gmail.com" "freddy" "password" Nothing Nothing time
+              Db.createUser "fred" "johnson" "fred@gmail.com" "freddy" "password" Nothing Nothing time
             user2Key <-
-              Spec.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
-            user1Offer <- Spec.createOffer user1Key categoryKey photoKey "math" 99 time
-            user2Offer <- Spec.createOffer user2Key categoryKey photoKey "physics" 99 time
-            tradeKey <- Spec.createTrade user1Offer user2Offer False time
-            tradeChatKey <- Spec.createTradeChat tradeKey time
-            msg1Key <- Spec.createMessage tradeChatKey user1Key "hey bill" (UTCTime (fromGregorian 2018 3 1) (secondsToDiffTime 0))
-            msg2Key <- Spec.createMessage tradeChatKey user2Key "hi fred" (UTCTime (fromGregorian 2018 3 2) (secondsToDiffTime 350))
+              Db.createUser "bill" "johnson" "bill@gmail.com" "billy" "password" Nothing Nothing time
+            user1Offer <- Db.createOffer user1Key categoryKey photoKey "math" 99 time
+            user2Offer <- Db.createOffer user2Key categoryKey photoKey "physics" 99 time
+            tradeKey <- Db.createTrade user1Offer user2Offer False time
+            tradeChatKey <- Db.createTradeChat tradeKey time
+            msg1Key <- Db.createMessage tradeChatKey user1Key "hey bill" (UTCTime (fromGregorian 2018 3 1) (secondsToDiffTime 0))
+            msg2Key <- Db.createMessage tradeChatKey user2Key "hi fred" (UTCTime (fromGregorian 2018 3 2) (secondsToDiffTime 350))
             msg3Key <-
-              Spec.createMessage tradeChatKey user1Key "whatcha doin?" (UTCTime (fromGregorian 2018 3 2) (secondsToDiffTime 100))
+              Db.createMessage tradeChatKey user1Key "whatcha doin?" (UTCTime (fromGregorian 2018 3 2) (secondsToDiffTime 100))
             msgs <- getMessages tradeChatKey
             return (msgs, msg1Key, msg2Key, msg3Key)
         Sql.entityKey <$> messages `shouldBe` [msg1Key, msg3Key, msg2Key]
