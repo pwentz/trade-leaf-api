@@ -33,4 +33,4 @@ spec =
               Db.createMessage tradeChatKey user1Key "whatcha doin?" (UTCTime (fromGregorian 2018 3 2) (secondsToDiffTime 100))
             msgs <- getMessages tradeChatKey
             return (msgs, msg1Key, msg2Key, msg3Key)
-        Sql.entityKey <$> messages `shouldBe` [msg1Key, msg3Key, msg2Key]
+        Sql.entityKey <$> messages `shouldBe` [msg2Key, msg3Key, msg1Key]
