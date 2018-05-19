@@ -57,32 +57,46 @@ seedDb config = do
   encodedPassword <- BS.unpack . fromJust <$> encodePassword "password"
   runAppToIO config $ do
     time <- liftIO getCurrentTime
+
     photoKey <- Db.createPhoto "" time
     fingerPaintingPupPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638923/finger-painting-dog_vm26xw.jpg" time
     waterColorPaintingPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1512865187/c075786ba959a19c4b49abec03bc5d3c_ggvnvx.jpg" time
     manInRainPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638661/rain-watercolor_kunesi.jpg" time
+    waterfallPhotokey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1524427341/w3x4nmkkdulyy4hxnxim.jpg" time
+
     woodworkingCategoryKey <- Db.createCategory "woodworking" time
     artCategoryKey <- Db.createCategory "decorative art" time
+
     currentUserKey <- Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" encodedPassword Nothing (Just $ Coords 41.938132 (-87.642753)) time
     currentUserOffer1Key <- Db.createOffer currentUserKey artCategoryKey photoKey "some painting" 999 time
     currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
-    {-| 6 miles from currentUser -}
+
     user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" encodedPassword Nothing (Just $ Coords 37.785834 (-122.406417)) time
     user2OfferKey <- Db.createOffer user2Key artCategoryKey waterColorPaintingPhotoKey "water color 30x40 painting" 999 time
     user2OfferRequestKey <- Db.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
-    {-| 14 miles from currentUser -}
+
     user3Key <- Db.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" encodedPassword Nothing (Just $ Coords 37.785834 (-122.406417)) time
     user3OfferKey <- Db.createOffer user3Key artCategoryKey fingerPaintingPupPhotoKey "finger painting dog with lots of colors" 999 time
     user3OfferRequestKey <- Db.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
-    {-| 9 miles from currentUser -}
+
     user4Key <- Db.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" encodedPassword Nothing (Just $ Coords 37.785834 (-122.406417)) time
     user4OfferKey <- Db.createOffer user4Key artCategoryKey manInRainPhotoKey "man in rain - watercolor" 999 time
     user4OfferRequestKey <- Db.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
+
+    user5Key <- Db.createUser "John" "Johnson" "jj@gmail.com" "jj1" encodedPassword Nothing (Just $ Coords 37.785834 (-122.406417)) time
+    user5OfferKey <- Db.createOffer user5Key artCategoryKey waterfallPhotokey "waterfall" 999 time
+    user5OfferRequestKey <- Db.createRequest user5OfferKey artCategoryKey "looking for a cool painting" time
+
     currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
     currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
     currentUserOffer3Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time
     currentUserRequest3Key <- Db.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
     currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
     currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
+
     tradeKey <- Db.createTrade currentUserOffer2Key user4OfferKey False time
+    -- WHY DOES ADDITION OF NEW TRADE MAKE OLD TRADE NOT SHOW UP?
+    trade2Key <- Db.createTrade currentUserOffer1Key user5OfferKey False time
+    tradeChatKey <- Db.createTradeChat trade2Key time
+    messageKey <- Db.createMessage tradeChatKey user5Key "Cool. Let's meet at this coffee shop around 5. I usually get off work at 4:30, so I might be a few minutes late." time
     return ()

@@ -14,5 +14,5 @@ getMessages tradeChatKey =
       from $ \(messages `InnerJoin` tradeChats) -> do
           on (messages ^. MessageTradeChatId ==. tradeChats ^. TradeChatId)
           where_ (tradeChats ^. TradeChatId ==. val tradeChatKey)
-          orderBy [asc (messages ^. MessageCreatedAt)]
+          orderBy [desc (messages ^. MessageCreatedAt)]
           return messages
