@@ -30,6 +30,7 @@ findByTrade tradeKey = sHead <$> foundTradeChat
         select $
           from $ \(trades `InnerJoin` tradeChats) -> do
             on (trades ^. TradeId ==. tradeChats ^. TradeChatTradeId)
+            where_ (trades ^. TradeId ==. val tradeKey)
             return tradeChats
 
 findByUser :: Sql.Key User -> App [Sql.Key TradeChat]
@@ -104,3 +105,6 @@ findAllChatData userKey =
         orderedMessages <- chatMessages
         where_ (users ^. UserId ==. val userKey)
         return (tradeChats, trades, offers, users, orderedMessages)
+
+destroyTradeChat :: Sql.Key TradeChat -> App ()
+destroyTradeChat tradeChatKey = Db.run $ Sql.deleteWhere [TradeChatId Sql.==. tradeChatKey]

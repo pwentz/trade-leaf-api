@@ -16,3 +16,6 @@ getMessages tradeChatKey =
           where_ (tradeChats ^. TradeChatId ==. val tradeChatKey)
           orderBy [desc (messages ^. MessageCreatedAt)]
           return messages
+
+destroyMessage :: Sql.Key Message -> App ()
+destroyMessage msgKey = Db.run $ Sql.deleteWhere [MessageId Sql.==. msgKey]
