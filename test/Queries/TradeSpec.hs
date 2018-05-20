@@ -94,3 +94,28 @@ spec =
             foundTrades <- findExchange offer1Key
             return (Pg.entityKey <$> foundTrades, [trade2Key, trade3Key])
         foundTrades `shouldMatchList` expectedTrades
+    context "findFromInvolved" $ do
+      it "finds a trade where given offers are involved" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        (foundTrade, tradeKey) <- Spec.runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          tradeKey <- Db.createTrade offer2Key offer4Key False time
+          foundTrade <- findFromInvolved offer4Key offer2Key
+          return (foundTrade , tradeKey)
+        Pg.entityKey <$> foundTrade `shouldBe` Just tradeKey
+      it "returns Nothing if nothing is found" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        foundTrade <- Spec.runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          tradeKey <- Db.createTrade offer3Key offer4Key False time
+          findFromInvolved offer4Key offer2Key
+        foundTrade `shouldBe` Nothing
+    context "destroyTrade" $
+      it "destroys a given trade" $ \config -> do
+        DbSetup {..} <- Spec.runAppToIO config dbSetup
+        tradeCount <- Spec.runAppToIO config $ do
+          time <- liftIO getCurrentTime
+          tradeKey <- Db.createTrade offer3Key offer4Key False time
+          destroyTrade tradeKey
+          Db.run $ Pg.count ([] :: [Pg.Filter Trade])
+        tradeCount `shouldBe` 0

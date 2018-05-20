@@ -50,24 +50,36 @@ dbSetup = do
     currentUserKey <- Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time
     currentUserOffer1Key <- Db.createOffer currentUserKey artCategoryKey photoKey "some painting" 999 time
     currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
+
     {-| 6 miles from currentUser -}
     user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" "password" Nothing (Just $ Coords 41.858210 (-87.651700)) time
     user2OfferKey <- Db.createOffer user2Key artCategoryKey photoKey "water color 30x40 painting" 10 time
     user2OfferRequestKey <- Db.createRequest user2OfferKey artCategoryKey "animal painting for kid" time
+
     {-| 14 miles from currentUser -}
     user3Key <- Db.createUser "Crack" "Jackson" "crackjack@gmail.com" "crackjack1" "password" Nothing (Just $ Coords 41.734517 (-87.674043)) time
     user3OfferKey <- Db.createOffer user3Key artCategoryKey photoKey "finger painting dog with lots of colors" 10 time
     user3OfferRequestKey <- Db.createRequest user3OfferKey artCategoryKey "looking for a large painting" time
+
     {-| 9 miles from currentUser -}
     user4Key <- Db.createUser "Millie" "Bobby Brown" "bobby@brown.com" "milliebob" "password" Nothing (Just $ Coords 41.804575 (-87.671359)) time
     user4OfferKey <- Db.createOffer user4Key artCategoryKey photoKey "man in rain - watercolor" 10 time
     user4OfferRequestKey <- Db.createRequest user4OfferKey woodworkingCategoryKey "looking for a wooden ship" time
+
     currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
     currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
     currentUserOffer3Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time
     currentUserRequest3Key <- Db.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
     currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
     currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
+
+    user5Key <- Db.createUser "John" "Johnson" "jj@gmail.com" "jj1" "password" Nothing (Just $ Coords 41.938132 (-87.642753)) time
+    user5OfferKey <- Db.createOffer user5Key artCategoryKey photoKey "waterfall" 999 time
+    user5OfferRequestKey <- Db.createRequest user5OfferKey artCategoryKey "looking for a cool painting" time
+
+    tradeKey <- Db.createTrade currentUserOffer1Key user5OfferKey False time
+    tradeChatKey <- Db.createTradeChat tradeKey time
+
     return DbSetup
             { currentUserKey = currentUserKey
             , currentUserOffer1Key = currentUserOffer1Key
@@ -86,8 +98,8 @@ spec :: Spec
 spec =
   around Spec.setupTeardown $
   describe "Api.Matches" $ do
-    context "containsExchangeOffer" $ do
-      it "returns true if given offer is accepted offer in trade with any given offers" $ \config -> do
+    context "isInvolvedInTradeChat" $ do
+      it "returns true if given offer is involved in trade chat with any of user's offers" $ \config -> do
         DbSetup {..} <- Spec.runAppToIO config dbSetup
         hasApproved <-
           Spec.runAppToIO config $
@@ -103,9 +115,9 @@ spec =
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
-                sequence (liftA2 containsExchangeOffer mbOffer mbUserOfferEnts)
+                sequence (liftA2 isInvolvedInTradeChat mbOffer mbUserOfferEnts)
         hasApproved `shouldBe` Just True
-      it "returns false if given offer is NOT accepted offer in trade with any given offers" $ \config -> do
+      it "returns false if given offer is NOT involved in trade chat with any given offers" $ \config -> do
         DbSetup {..} <- Spec.runAppToIO config dbSetup
         hasApproved <-
           Spec.runAppToIO config $
@@ -119,11 +131,10 @@ spec =
                 tradeKey <-
                   Db.createTrade currentUserOffer1Key user2OfferKey False time
                 _ <- Db.createTrade currentUserOffer2Key currentUserOffer3Key False time
-                tradeChatKey <- Db.createTradeChat tradeKey time
                 mbOffer <- fmap (Sql.Entity user2OfferKey) <$> Db.run (Sql.get user2OfferKey)
                 mbUserOffers <- sequence <$> (traverse (Db.run . Sql.get) userOffers)
                 let mbUserOfferEnts = zipWith Sql.Entity userOffers <$> mbUserOffers
-                sequence (liftA2 containsExchangeOffer mbOffer mbUserOfferEnts)
+                sequence (liftA2 isInvolvedInTradeChat mbOffer mbUserOfferEnts)
         hasApproved `shouldBe` Just False
     context "findAcceptedTrade" $
       it

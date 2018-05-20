@@ -13,7 +13,7 @@ import           Data.Time              (getCurrentTime)
 import qualified Database.Persist.Sql   as Sql
 import           GHC.Generics           (Generic)
 import qualified Db.Main                as Db
-import           Models.Photo           (Photo (Photo))
+import           Models.Photo
 import           Servant
 
 data PhotoRequest = PhotoRequest
@@ -38,3 +38,6 @@ createPhoto (PhotoRequest cloudId url) = do
         (throwError . apiErr . (,) E401 . sqlError)
         (return . Sql.fromSqlKey)
         eitherPhoto
+
+destroyPhoto :: Sql.Key Photo -> App ()
+destroyPhoto photoKey = Db.run $ Sql.deleteWhere [PhotoId Sql.==. photoKey]
