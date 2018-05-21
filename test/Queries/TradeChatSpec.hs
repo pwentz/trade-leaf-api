@@ -5,6 +5,7 @@ import           Data.Time              (UTCTime (..), fromGregorian,
                                          getCurrentTime, secondsToDiffTime)
 import qualified Database.Persist.Sql   as Sql
 import qualified Db.Main                as Db
+import Data.Maybe (fromJust)
 import           Models.TradeChat
 import           Queries.TradeChat
 import qualified SpecHelper             as Spec
@@ -107,8 +108,9 @@ spec =
             expected chatData1 chatData2 =
               foldr
                 (\(tradeChatKey, userKey, messageKeys) acc -> do
+                  tradeChat <- fromJust <$> Db.run (Sql.get tradeChatKey) :: App TradeChat
                   messages <- traverse extractMessage messageKeys
-                  Map.insert (Sql.fromSqlKey tradeChatKey) (ChatData (Sql.fromSqlKey userKey) messages) <$> acc
+                  Map.insert (Sql.fromSqlKey tradeChatKey) (ChatData (Sql.fromSqlKey tradeChatKey) (Sql.fromSqlKey userKey) messages (Sql.fromSqlKey $ tradeChatTradeId tradeChat) (tradeChatCreatedAt tradeChat) (tradeChatUpdatedAt tradeChat)) <$> acc
                  )
                  (return Map.empty)
                  [chatData1, chatData2]

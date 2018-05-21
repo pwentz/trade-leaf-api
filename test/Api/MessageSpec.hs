@@ -2,6 +2,7 @@
 
 module Api.MessageSpec where
 
+import Config (App)
 import Api.Message (MessageRequest(..), createMessage, getMessages)
 import Api.Error (apiErr, StatusCode(E401), ApiErr(Unauthorized))
 import qualified Database.Persist.Sql as Sql
@@ -12,6 +13,8 @@ import Test.QuickCheck
 import Data.Time (getCurrentTime)
 import Control.Monad.IO.Class (liftIO)
 import Models.Message
+import Data.Maybe (fromJust)
+import Models.TradeChat
 
 spec :: Spec
 spec =
@@ -25,7 +28,7 @@ spec =
       in do
       context "createMessage" $ do
         it "can create a new message" $ \config -> do
-          (msgCount, mbMsg, tradeChatKey, senderKey) <- Spec.runAppToIO config $ do
+          (msgCount, mbMsg, tradeChatKey, senderKey, tradeChat, createTime) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime
             categoryKey <- Db.createCategory "tutoring" time
             photoKey <- Db.createPhoto "dog.png" time
@@ -38,11 +41,13 @@ spec =
             msgKey <- createMessage (MessageRequest (Sql.fromSqlKey tradeChatKey) "hey, bill") (currentUser time)
             (mbMsg :: Maybe Message) <- Db.run $ Sql.get (Sql.toSqlKey msgKey)
             msgCount <- Db.run $ Sql.count ([] :: [Sql.Filter Message])
-            return (msgCount, mbMsg, tradeChatKey, currentUserKey)
+            tradeChat <- fromJust <$> Db.run (Sql.get tradeChatKey) :: App TradeChat
+            return (msgCount, mbMsg, tradeChatKey, currentUserKey, tradeChat, time)
           msgCount `shouldBe` 1
           messageTradeChatId <$> mbMsg `shouldBe` Just tradeChatKey
           messageSenderId <$> mbMsg `shouldBe` Just senderKey
           messageContent <$> mbMsg `shouldBe` Just "hey, bill"
+          (tradeChatUpdatedAt tradeChat > createTime) `shouldBe` True
         it "returns an error if current user isn't involved in trade chat " $ \config -> do
           (tradeChatId, badUser) <- Spec.runAppToIO config $ do
             time <- liftIO getCurrentTime

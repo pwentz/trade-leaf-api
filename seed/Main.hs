@@ -95,8 +95,9 @@ seedDb config = do
     currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
 
     tradeKey <- Db.createTrade currentUserOffer2Key user4OfferKey False time
-    -- WHY DOES ADDITION OF NEW TRADE MAKE OLD TRADE NOT SHOW UP?
+
     trade2Key <- Db.createTrade currentUserOffer1Key user5OfferKey False time
     tradeChatKey <- Db.createTradeChat trade2Key time
     messageKey <- Db.createMessage tradeChatKey user5Key "Cool. Let's meet at this coffee shop around 5. I usually get off work at 4:30, so I might be a few minutes late." time
+
     return ()

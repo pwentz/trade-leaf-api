@@ -1,13 +1,16 @@
-{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Queries.TradeChat where
 
 import           Config               (App)
 import           Control.Applicative
 import           Data.Int             (Int64)
 import qualified Data.Map             as Map
+import           Data.Maybe           (fromJust)
+import           Data.Time            (UTCTime)
 import           Database.Esqueleto
 import qualified Database.Persist.Sql as Sql
 import qualified Db.Main              as Db
+import           GHC.Generics         (Generic)
 import           Models.Message
 import           Models.Offer
 import           Models.Trade
@@ -15,11 +18,14 @@ import           Models.TradeChat
 import           Models.User
 import qualified Queries.Message      as MsgQuery
 import           Utils                (sHead)
-import GHC.Generics (Generic)
 
 data ChatData =
-  ChatData { recipient :: Int64
+  ChatData { id        :: Int64
+           , recipient :: Int64
            , messages  :: [Sql.Entity Message]
+           , tradeId   :: Int64
+           , createdAt :: UTCTime
+           , updatedAt :: UTCTime
            } deriving (Eq, Show, Generic)
 
 findByTrade :: Sql.Key Trade -> App (Maybe (Sql.Entity TradeChat))
@@ -52,14 +58,21 @@ findByUser = (fmap . fmap) unValue . getTradeChats
 findChatData :: Sql.Key User -> App (Map.Map Int64 ChatData)
 findChatData userKey =
    foldr
-    (\tradeChatKey ->
+    (\tradeChatKey acc ->
+      let
+        tradeChat = fromJust <$> Db.run (Sql.get tradeChatKey) :: App TradeChat
+      in
       liftA2
         (Map.insert (Sql.fromSqlKey tradeChatKey))
-        (liftA2
-          (ChatData . Sql.fromSqlKey . recipient)
-          (findRecipients tradeChatKey)
-          (MsgQuery.getMessages tradeChatKey)
+        (pure ChatData <*>
+          (return $ Sql.fromSqlKey tradeChatKey) <*>
+            (Sql.fromSqlKey . recipient <$> findRecipients tradeChatKey) <*>
+              (MsgQuery.getMessages tradeChatKey) <*>
+                (Sql.fromSqlKey . tradeChatTradeId <$> tradeChat) <*>
+                  (tradeChatCreatedAt <$> tradeChat) <*>
+                    (tradeChatUpdatedAt <$> tradeChat)
         )
+        acc
     )
     (return Map.empty) =<< findByUser userKey
      where
