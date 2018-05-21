@@ -20,7 +20,8 @@ import qualified Queries.Message      as MsgQuery
 import           Utils                (sHead)
 
 data ChatData =
-  ChatData { recipient :: Int64
+  ChatData { id        :: Int64
+           , recipient :: Int64
            , messages  :: [Sql.Entity Message]
            , tradeId   :: Int64
            , createdAt :: UTCTime
@@ -64,11 +65,12 @@ findChatData userKey =
       liftA2
         (Map.insert (Sql.fromSqlKey tradeChatKey))
         (pure ChatData <*>
-          (Sql.fromSqlKey . recipient <$> findRecipients tradeChatKey) <*>
-            (MsgQuery.getMessages tradeChatKey) <*>
-              (Sql.fromSqlKey . tradeChatTradeId <$> tradeChat) <*>
-                (tradeChatCreatedAt <$> tradeChat) <*>
-                  (tradeChatUpdatedAt <$> tradeChat)
+          (return $ Sql.fromSqlKey tradeChatKey) <*>
+            (Sql.fromSqlKey . recipient <$> findRecipients tradeChatKey) <*>
+              (MsgQuery.getMessages tradeChatKey) <*>
+                (Sql.fromSqlKey . tradeChatTradeId <$> tradeChat) <*>
+                  (tradeChatCreatedAt <$> tradeChat) <*>
+                    (tradeChatUpdatedAt <$> tradeChat)
         )
         acc
     )

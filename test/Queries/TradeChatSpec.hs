@@ -110,7 +110,7 @@ spec =
                 (\(tradeChatKey, userKey, messageKeys) acc -> do
                   tradeChat <- fromJust <$> Db.run (Sql.get tradeChatKey) :: App TradeChat
                   messages <- traverse extractMessage messageKeys
-                  Map.insert (Sql.fromSqlKey tradeChatKey) (ChatData (Sql.fromSqlKey userKey) messages (Sql.fromSqlKey $ tradeChatTradeId tradeChat) (tradeChatCreatedAt tradeChat) (tradeChatUpdatedAt tradeChat)) <$> acc
+                  Map.insert (Sql.fromSqlKey tradeChatKey) (ChatData (Sql.fromSqlKey tradeChatKey) (Sql.fromSqlKey userKey) messages (Sql.fromSqlKey $ tradeChatTradeId tradeChat) (tradeChatCreatedAt tradeChat) (tradeChatUpdatedAt tradeChat)) <$> acc
                  )
                  (return Map.empty)
                  [chatData1, chatData2]
