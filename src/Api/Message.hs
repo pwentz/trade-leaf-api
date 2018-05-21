@@ -21,6 +21,7 @@ import qualified Queries.TradeChat as TCQuery
 import qualified Queries.User as UserQuery
 import Servant
 import Data.Maybe (fromJust)
+import Models.TradeChat
 
 data MessageRequest = MessageRequest
   { tradeChatId :: Int64
@@ -53,7 +54,11 @@ createMessage MessageRequest {..} User {..} = do
            , messageCreatedAt = time
            , messageUpdatedAt = time
            }
-       either (throwError . Err.apiErr . (,) Err.E400 . Err.sqlError) (return . Sql.fromSqlKey) eitherMsg
+       case eitherMsg of
+         Left err -> throwError $ Err.apiErr (Err.E400, Err.sqlError err)
+         Right msgKey -> do
+           Db.run $ Sql.update (Sql.toSqlKey tradeChatId :: Sql.Key TradeChat) [TradeChatUpdatedAt Sql.=. time]
+           return $ Sql.fromSqlKey msgKey
      else throwError $ Err.apiErr (Err.E401, Err.Unauthorized)
 
 getMessages :: Int64 -> User -> App [Sql.Entity Message]
