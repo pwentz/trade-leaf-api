@@ -137,8 +137,7 @@ spec =
                 sequence (liftA2 isInvolvedInTradeChat mbOffer mbUserOfferEnts)
         hasApproved `shouldBe` Just False
     context "findAcceptedTrade" $
-      it
-        "finds trade w/ accepted offer within given list of offers where given offer is exchange offer" $ \config -> do
+      it "finds trade w/ accepted offer within given list of offers where given offer is exchange offer" $ \config -> do
         DbSetup {..} <- Spec.runAppToIO config dbSetup
         (acceptedTradeKey, expected) <-
           Spec.runAppToIO config $

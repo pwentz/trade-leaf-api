@@ -55,5 +55,17 @@ findFromInvolved acceptedOfferKey exchangeOfferKey = sHead <$> foundTrades
           )
         return trades
 
+findFromOffer :: Pg.Key Offer -> App (Maybe (Pg.Entity Trade))
+findFromOffer offerKey =
+  sHead <$> foundTrade
+  where
+      foundTrade =
+        Db.run $
+          select $
+            from $ \trades -> do
+            where_ (trades ^. TradeAcceptedOfferId ==. val offerKey ||.
+                    trades ^. TradeExchangeOfferId ==. val offerKey)
+            return trades
+
 destroyTrade :: Pg.Key Trade -> App ()
 destroyTrade tradeKey = Db.run $ Pg.deleteWhere [TradeId Pg.==. tradeKey]

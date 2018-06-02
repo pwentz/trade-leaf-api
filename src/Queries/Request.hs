@@ -9,3 +9,6 @@ import           Models.Request
 getOfferRequest :: Key Offer -> App (Maybe (Entity Request))
 getOfferRequest offerKey =
     Db.run $ selectFirst [RequestOfferId ==. offerKey] []
+
+destroyRequest :: Key Request -> App ()
+destroyRequest reqKey = Db.run $ deleteWhere [RequestId ==. reqKey]

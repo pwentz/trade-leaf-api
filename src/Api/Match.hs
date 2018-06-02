@@ -51,17 +51,35 @@ type MatchAPI
 matchServer :: ServerT MatchAPI App
 matchServer = getMatches
 
+{-|
+    1. Get key for given user
+    2. Find all of the matches for any of cu's offers and the user they belong to
+    3. Given cu and the matches/users for cu, fold through the list of matches/users. For each one...
+       a. Grab the distance between the cu and given user (distance)
+       b. Grab all of the offers that belong to cu that is considered a match on the given offer (currentUserMatches)
+       c. Determine whether any of the currentUserMatches are already involved in a trade chat with given offer (isAlreadyInvolvedInTradeChatWithUser)
+       d. Determine whether the distance between users is less than radius on the offer
+       e. Determine whether the distance between users is less than the radius on any of currentUserMatches
+       f. If d is true, e is true, and c is false...
+          fa. Get meta data on the given user
+          fb. Find trade where given offer is the exchange offer AND the accepted offer lives in currentUserMatches
+          fc. if such a trade exists puts MatchResponse in front of list
+              otherwise put at end of list
+       g. otherwise skip offer
+    4. Dedupe response
+|-}
+
 getMatches :: User -> App [MatchResponse]
 getMatches currentUser = do
-    mbUserKey <- (Sql.entityKey <$>) <$> findByUsername (userUsername currentUser)
+    mbUserKey <- (Sql.entityKey <$>) <$> findByUsername (userUsername currentUser) -- 1
     maybe (return []) (findMatches . flip Sql.Entity currentUser) mbUserKey
   where
     findMatches :: Sql.Entity User -> App [MatchResponse]
     findMatches =
-      liftA2 (>>=) matchesByUser findWithinRadius
+      liftA2 (>>=) matchesByUser findWithinRadius -- 2 (matchesByUser)
 
 findWithinRadius :: Sql.Entity User -> [(Sql.Entity Offer, Sql.Entity User)] -> App [MatchResponse]
-findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
+findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return []) -- 3
   where
     distanceBetweenUsers :: User -> User -> Double
     distanceBetweenUsers user1 user2 =
@@ -69,17 +87,17 @@ findWithinRadius currentUser = (nub <$>) . foldr foldMatches (return [])
         liftA2 distanceInMiles (userCoordinates user1) (userCoordinates user2)
     foldMatches :: (Sql.Entity Offer, Sql.Entity User) -> App [MatchResponse] -> App [MatchResponse]
     foldMatches (offer, user) acc =
-        let distance = distanceBetweenUsers (Sql.entityVal currentUser) (Sql.entityVal user)
+        let distance = distanceBetweenUsers (Sql.entityVal currentUser) (Sql.entityVal user) -- 3a
             isWithinDistance offerEntity =
                 distance <= offerRadius (Sql.entityVal offerEntity)
-        in do currentUserMatches <- findUserMatches currentUser offer
-              isAlreadyInvolvedInTradeChatWithUser <- isInvolvedInTradeChat offer currentUserMatches
-              if isWithinDistance offer &&
-                 any isWithinDistance currentUserMatches &&
-                 not isAlreadyInvolvedInTradeChatWithUser
+        in do currentUserMatches <- findUserMatches currentUser offer -- 3b
+              isAlreadyInvolvedInTradeChatWithUser <- isInvolvedInTradeChat offer currentUserMatches -- 3c
+              if isWithinDistance offer && -- 3d
+                 any isWithinDistance currentUserMatches && -- 3e
+                 not isAlreadyInvolvedInTradeChatWithUser -- 3f
                   then do
-                      userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user)
-                      acceptedUserOfferTrade <- findAcceptedTrade offer currentUserMatches
+                      userMeta <- getUserMeta (Sql.fromSqlKey $ Sql.entityKey user) -- 3fa
+                      acceptedUserOfferTrade <- findAcceptedTrade offer currentUserMatches -- 3fb
                       offerRes <- toOfferResponse offer
                       exchangeOffers <- traverse toOfferResponse currentUserMatches
                       case acceptedUserOfferTrade of
