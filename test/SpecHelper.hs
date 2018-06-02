@@ -29,7 +29,6 @@ runAppToIO config app = do
 setupTeardown :: (Config -> IO a) -> IO ()
 setupTeardown runTestsWith = do
     pool <- makePool Test
-    migrateDb pool
     cleanDb pool
     runTestsWith Config { getPool = pool
                         , getEnv = Test
