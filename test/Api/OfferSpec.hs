@@ -3,8 +3,9 @@
 
 module Api.OfferSpec where
 
+import Api.Error
 import           Api.Offer                   (OfferResponse (..), getOffers,
-                                              toOfferResponse)
+                                              toOfferResponse, removeOffer)
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
 import           Api.Request                 (RequestResponse (..))
 import           Api.User                    (UserRequest (..), createUser)
@@ -23,6 +24,7 @@ import           Models.User
 import qualified SpecHelper                  as Spec
 import           Test.Hspec
 import           Test.QuickCheck
+import Data.Maybe (fromJust)
 
 data DbSetup = DbSetup
   { userKey   :: Pg.Key User
@@ -65,43 +67,48 @@ photo1 time = Db.newPhoto "https://dog.png" time
 photo2 :: UTCTime -> Photo
 photo2 time = Db.newPhoto "https://cat.png" time
 
+expectedOfferRes1 :: Pg.Key User -> Pg.Key Offer -> Pg.Key Photo -> Pg.Key Request -> UTCTime -> OfferResponse
+expectedOfferRes1 userKey offerKey photoKey req1Key time =
+    OfferResponse
+    { id = Pg.fromSqlKey offerKey
+    , userId = Pg.fromSqlKey userKey
+    , description = "painting"
+    , category = "decorative art"
+    , request =
+        Just
+          RequestResponse
+          { id = Pg.fromSqlKey req1Key
+          , offerId = Pg.fromSqlKey offerKey
+          , category = "handywork"
+          , description = "sand fence plz"
+          }
+    , photo = Pg.Entity photoKey (photo1 time)
+    }
+
+expectedOfferRes2 :: Pg.Key User -> Pg.Key Offer -> Pg.Key Photo -> Pg.Key Request -> UTCTime -> OfferResponse
+expectedOfferRes2 userKey offerKey photoKey req2Key time =
+    OfferResponse
+    { id = Pg.fromSqlKey offerKey
+    , userId = Pg.fromSqlKey userKey
+    , description = "i sit baby"
+    , category = "baby sitter"
+    , request =
+        Just
+          RequestResponse
+          { id = Pg.fromSqlKey req2Key
+          , offerId = Pg.fromSqlKey offerKey
+          , category = "physics tutor"
+          , description = "plz tutor me"
+          }
+    , photo = Pg.Entity photoKey (photo2 time)
+    }
+
 spec :: Spec
 spec =
   around Spec.setupTeardown $
-  describe "Api.Offer" $
-  let expectedOfferRes1 userKey offerKey photoKey req1Key time =
-        OfferResponse
-        { id = Pg.fromSqlKey offerKey
-        , userId = Pg.fromSqlKey userKey
-        , description = "painting"
-        , category = "decorative art"
-        , request =
-            Just
-              RequestResponse
-              { id = Pg.fromSqlKey req1Key
-              , offerId = Pg.fromSqlKey offerKey
-              , category = "handywork"
-              , description = "sand fence plz"
-              }
-        , photo = Pg.Entity photoKey (photo1 time)
-        }
-      expectedOfferRes2 userKey offerKey photoKey req2Key time =
-        OfferResponse
-        { id = Pg.fromSqlKey offerKey
-        , userId = Pg.fromSqlKey userKey
-        , description = "i sit baby"
-        , category = "baby sitter"
-        , request =
-            Just
-              RequestResponse
-              { id = Pg.fromSqlKey req2Key
-              , offerId = Pg.fromSqlKey offerKey
-              , category = "physics tutor"
-              , description = "plz tutor me"
-              }
-        , photo = Pg.Entity photoKey (photo2 time)
-        }
-  in do it "can convert an offer into an offer response" $ \config -> do
+    describe "Api.Offer" $ do
+      context "toOfferResponse" $
+        it "can convert an offer into an offer response" $ \config -> do
           time <- liftIO getCurrentTime
           DbSetup {..} <- Spec.runAppToIO config dbSetup
           offerRes <-
@@ -109,6 +116,7 @@ spec =
               mbOffer <- Db.run (Pg.get offer1Key)
               traverse toOfferResponse (Pg.Entity offer1Key <$> mbOffer)
           offerRes `shouldBe` Just (expectedOfferRes1 userKey offer1Key photo1Key req1Key time)
+      context "getOffers" $
         it "can get offer response data for a given user" $ \config -> do
           time <- liftIO getCurrentTime
           DbSetup {..} <- Spec.runAppToIO config dbSetup
@@ -117,3 +125,19 @@ spec =
             [ expectedOfferRes1 userKey offer1Key photo1Key req1Key time
             , expectedOfferRes2 userKey offer2Key photo2Key req2Key time
             ]
+      context "removeOffer" $ do
+        it "throws if trying to remove an offer that doesn't belong to authed user" $ \config -> do
+          DbSetup {..} <- Spec.runAppToIO config dbSetup
+          newUser <- Spec.runAppToIO config $ do
+            time <- liftIO getCurrentTime
+            newUserKey <-
+              Db.createUser "ed" "griswold" "eg@yahoo.com" "grissy1" "pass" Nothing Nothing time
+            fromJust <$> Db.run (Pg.get newUserKey) :: App User
+          Spec.runAppToIO config (removeOffer (Pg.fromSqlKey offer1Key) newUser) `shouldThrow` (== apiErr (E401, Unauthorized))
+        it "removes given offer" $ \config -> do
+          DbSetup {..} <- Spec.runAppToIO config dbSetup
+          offer <- Spec.runAppToIO config $ do
+            mbUser <- Db.run (Pg.get userKey)
+            traverse (removeOffer $ Pg.fromSqlKey offer1Key) mbUser
+            Db.run (Pg.get offer1Key) :: App (Maybe Offer)
+          offer `shouldBe` Nothing
