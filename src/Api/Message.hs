@@ -1,31 +1,31 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DataKinds       #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators   #-}
 
 module Api.Message where
 
-import qualified Api.Error as Err
-import Config (App)
-import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Int (Int64)
-import Data.Time (getCurrentTime)
-import qualified Database.Persist.Sql as Sql
-import qualified Db.Main as Db
-import GHC.Generics (Generic)
-import Models.Message
-import Models.User
-import qualified Queries.Message as Query
-import qualified Queries.TradeChat as TCQuery
-import qualified Queries.User as UserQuery
-import Servant
-import Data.Maybe (fromJust)
-import Models.TradeChat
+import qualified Api.Error              as Err
+import           Config                 (App)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Aeson             (FromJSON, ToJSON)
+import           Data.Int               (Int64)
+import           Data.Maybe             (fromJust)
+import           Data.Time              (getCurrentTime)
+import qualified Database.Persist.Sql   as Sql
+import qualified Db.Main                as Db
+import           GHC.Generics           (Generic)
+import           Models.Message
+import           Models.TradeChat
+import           Models.User
+import qualified Queries.Message        as Query
+import qualified Queries.TradeChat      as TCQuery
+import qualified Queries.User           as UserQuery
+import           Servant
 
 data MessageRequest = MessageRequest
   { tradeChatId :: Int64
-  , content :: String
+  , content     :: String
   } deriving (Eq, Show, Generic)
 
 instance FromJSON MessageRequest

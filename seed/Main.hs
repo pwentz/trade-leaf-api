@@ -58,7 +58,11 @@ seedDb config = do
   runAppToIO config $ do
     time <- liftIO getCurrentTime
 
-    photoKey <- Db.createPhoto "" time
+    currentUserPaintingPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1527969829/jimi-hendrix_muimqf.jpg" time
+    woodenBattleshipPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1527970000/wooden-battleship_clmhmw.jpg" time
+    woodenRowboatPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1527970119/wooden-rowboat_tsg2wi.jpg" time
+    woodenCanoePhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1527970122/wooden-canoe_bvuyt5.jpg" time
+
     fingerPaintingPupPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638923/finger-painting-dog_vm26xw.jpg" time
     waterColorPaintingPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1512865187/c075786ba959a19c4b49abec03bc5d3c_ggvnvx.jpg" time
     manInRainPhotoKey <- Db.createPhoto "http://res.cloudinary.com/tradeleaf/image/upload/v1511638661/rain-watercolor_kunesi.jpg" time
@@ -68,7 +72,7 @@ seedDb config = do
     artCategoryKey <- Db.createCategory "decorative art" time
 
     currentUserKey <- Db.createUser "pat" "wentz" "pat@yahoo.com" "pwentz" encodedPassword Nothing (Just $ Coords 41.938132 (-87.642753)) time
-    currentUserOffer1Key <- Db.createOffer currentUserKey artCategoryKey photoKey "some painting" 999 time
+    currentUserOffer1Key <- Db.createOffer currentUserKey artCategoryKey currentUserPaintingPhotoKey "some painting" 999 time
     currentUserRequest1Key <- Db.createRequest currentUserOffer1Key artCategoryKey "looking for nice painting i can hang in office" time
 
     user2Key <- Db.createUser "Fred" "Johnson" "fjohn@gmail.com" "freddyjohn" encodedPassword Nothing (Just $ Coords 37.785834 (-122.406417)) time
@@ -87,11 +91,11 @@ seedDb config = do
     user5OfferKey <- Db.createOffer user5Key artCategoryKey waterfallPhotokey "waterfall" 999 time
     user5OfferRequestKey <- Db.createRequest user5OfferKey artCategoryKey "looking for a cool painting" time
 
-    currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden battleship" 999 time
+    currentUserOffer2Key <- Db.createOffer currentUserKey woodworkingCategoryKey woodenBattleshipPhotoKey "wooden battleship" 999 time
     currentUserRequest2Key <- Db.createRequest currentUserOffer2Key artCategoryKey "watercolor painting of some weather" time
-    currentUserOffer3Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden rowboat" 999 time
+    currentUserOffer3Key <- Db.createOffer currentUserKey woodworkingCategoryKey woodenRowboatPhotoKey "wooden rowboat" 999 time
     currentUserRequest3Key <- Db.createRequest currentUserOffer3Key artCategoryKey "painting that will make me feel cozy" time
-    currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey photoKey "wooden canoe" 999 time
+    currentUserOffer4Key <- Db.createOffer currentUserKey woodworkingCategoryKey woodenCanoePhotoKey "wooden canoe" 999 time
     currentUserRequest4Key <- Db.createRequest currentUserOffer4Key artCategoryKey "watercolor with a dope vibe" time
 
     tradeKey <- Db.createTrade currentUserOffer2Key user4OfferKey False time

@@ -14,7 +14,9 @@ import qualified Db.Main              as Db
 import           Models.Offer
 import           Models.Request
 import           Models.User
+import Models.Trade
 import           Queries.Request      (getOfferRequest)
+import Utils (sHead)
 
 {-| find all matches -}
 findMatches :: Sql.Entity User -> App [Sql.Entity Offer]
@@ -68,3 +70,29 @@ findUserMatches currentUser offer =
         where_ (users ^. UserId ==. val (Sql.entityKey currentUser))
         where_ (offers ^. OfferCategoryId ==. offerReq ^. RequestCategoryId)
         return offers
+
+-- findAcceptedTrade :: Sql.Key User -> Sql.Key Offer -> App (Maybe (Sql.Entity Trade))
+-- findAcceptedTrade userKey offerKey =
+--   sHead <$> acceptedTrades
+--   where
+--     matchingOffers =
+--       from $ \(requests `InnerJoin` offers `InnerJoin` users) -> do
+--             on (offers ^. OfferUserId ==. users ^. UserId)
+--             on (requests ^. RequestOfferId ==. offers ^. OfferId)
+--             offerReq <-
+--                 from $ \(reqs `InnerJoin` offers) -> do
+--                     on (reqs ^. RequestOfferId ==. offers ^. OfferId)
+--                     where_ (offers ^. OfferId ==. val offerKey)
+--                     return reqs
+--             where_ (users ^. UserId ==. val userKey)
+--             where_ (offers ^. OfferCategoryId ==. offerReq ^. RequestCategoryId)
+--             return (offers ^. OfferId)
+--     acceptedTrades =
+--       Db.run $
+--         select $
+--           from $ \(offers `InnerJoin` trades) -> do
+--             on (trades ^. TradeExchangeOfferId ==. offers ^. OfferId)
+--             userMatches <- matchingOffers
+--             where_ ((offers ^. OfferId ==. val offerKey) &&.
+--                     (trades ^. TradeAcceptedOfferId `in_` userMatches))
+--             return trades

@@ -1,10 +1,12 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TypeOperators         #-}
 
 module Api.Offer where
 
+import qualified Api.Error                   as Err
 import           Api.Request                 (RequestResponse,
                                               toRequestResponse)
 import           Config                      (App)
@@ -21,8 +23,12 @@ import           Models.Category
 import           Models.Offer
 import           Models.Photo
 import           Models.Request
-import           Queries.Offer               (getOfferData, userOffers)
+import           Models.User
+import           Queries.Offer               (destroyOffer, getOfferData,
+                                              userOffers)
 import           Queries.Request             (getOfferRequest)
+import qualified Queries.User                as UserQuery
+import           Servant
 import           Utils                       (first, sHead)
 
 data OfferResponse = OfferResponse
@@ -35,6 +41,21 @@ data OfferResponse = OfferResponse
     } deriving (Eq, Show, Generic)
 
 instance ToJSON OfferResponse
+
+type OfferAPI
+    = "offers" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Delete '[JSON] ()
+
+-- offerServer :: ServerT OfferAPI App
+offerServer = removeOffer
+
+removeOffer :: Int64 -> User -> App ()
+removeOffer offerId User{..} = do
+  mbCurrentUserKey <- (fmap . fmap) entityKey (UserQuery.findByUsername userUsername)
+  mbOffer <- Db.run (get $ toSqlKey offerId) :: App (Maybe Offer)
+  if fromMaybe False $ liftA2 ((==) . offerUserId) mbOffer mbCurrentUserKey
+     then destroyOffer (toSqlKey offerId)
+     else throwError $ Err.apiErr (Err.E401, Err.Unauthorized)
+
 
 getOffers :: Int64 -> App [OfferResponse]
 getOffers userId = traverse toOfferResponse =<< userOffers (toSqlKey userId)
