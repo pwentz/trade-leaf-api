@@ -12,11 +12,13 @@ import           Api.Request                 (RequestResponse,
 import           Config                      (App)
 import           Control.Applicative         (liftA2)
 import           Control.Monad               (join)
-import           Data.Aeson                  (ToJSON)
+import           Control.Monad.IO.Class      (liftIO)
+import           Data.Aeson                  (FromJSON, ToJSON)
 import           Data.Int                    (Int64)
-import           Data.Maybe                  (fromMaybe)
+import           Data.Maybe                  (fromJust, fromMaybe)
 import qualified Database.Esqueleto          as E
 import           Database.Persist.Postgresql
+import           Data.Time                   (getCurrentTime)
 import qualified Db.Main                     as Db
 import           GHC.Generics                (Generic)
 import           Models.Category
@@ -40,13 +42,44 @@ data OfferResponse = OfferResponse
     , photo       :: Entity Photo
     } deriving (Eq, Show, Generic)
 
+data OfferRequest = OfferRequest
+    { categoryId  :: Int64
+    , photoId     :: Int64
+    , description :: String
+    , radius      :: Double
+    } deriving (Eq, Show, Generic)
+
 instance ToJSON OfferResponse
+instance FromJSON OfferRequest
 
 type OfferAPI
     = "offers" :> Capture "id" Int64 :> AuthProtect "jwt-auth" :> Delete '[JSON] ()
+      :<|> "offers" :> ReqBody '[JSON] OfferRequest :> AuthProtect "jwt-auth" :> Post '[JSON] Int64
 
 -- offerServer :: ServerT OfferAPI App
-offerServer = removeOffer
+offerServer = removeOffer :<|> createOffer
+
+createOffer :: OfferRequest -> User -> App Int64
+createOffer OfferRequest{..} User {..} = do
+  time <- liftIO getCurrentTime
+  mbCurrentUserKey <- (fmap . fmap) entityKey (UserQuery.findByUsername userUsername)
+  eitherOffer <-
+    Db.runSafe $
+      insert
+        Offer
+          { offerUserId = fromJust mbCurrentUserKey
+          , offerCategoryId = toSqlKey categoryId
+          , offerPhotoId = toSqlKey photoId
+          , offerDescription = description
+          , offerRadius = radius
+          , offerCreatedAt = time
+          , offerUpdatedAt = time
+          }
+  case eitherOffer of
+    Left err -> throwError $ Err.apiErr (Err.E400, Err.sqlError err)
+    Right offerKey ->
+      return (fromSqlKey offerKey)
+
 
 removeOffer :: Int64 -> User -> App ()
 removeOffer offerId User{..} = do

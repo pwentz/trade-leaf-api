@@ -12,6 +12,7 @@ import           Api.Match                        (MatchAPI, matchServer)
 import           Api.Message                      (MessageAPI, messageServer)
 import           Api.Offer                        (OfferAPI, offerServer)
 import           Api.Photo                        (PhotoAPI, photoServer)
+import           Api.Request                      (RequestAPI, requestServer)
 import           Api.Trade                        (TradeAPI, tradeServer)
 import           Api.TradeChat                    (TradeChatAPI,
                                                    tradeChatServer)
@@ -58,6 +59,9 @@ appToOfferServer cfg = enter (convertApp cfg >>> NT Handler) offerServer
 appToCategoryServer :: Config -> Server CategoryAPI
 appToCategoryServer cfg = enter (convertApp cfg >>> NT Handler) categoryServer
 
+appToRequestServer :: Config -> Server RequestAPI
+appToRequestServer cfg = enter (convertApp cfg >>> NT Handler) requestServer
+
 convertApp :: Config -> App :~> ExceptT ServantErr IO
 convertApp cfg = runReaderTNat cfg <<< NT runApp
 
@@ -71,6 +75,7 @@ type AppAPI
    :<|> MessageAPI
    :<|> OfferAPI
    :<|> CategoryAPI
+   :<|> RequestAPI
 
 appApi :: Proxy AppAPI
 appApi = Proxy
@@ -91,4 +96,5 @@ app cfg =
      appToTradeChatServer cfg :<|>
      appToMessageServer cfg :<|>
      appToOfferServer cfg :<|>
-     appToCategoryServer cfg)
+     appToCategoryServer cfg :<|>
+     appToRequestServer cfg)
