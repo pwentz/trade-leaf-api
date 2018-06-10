@@ -57,6 +57,7 @@ library
         Config
       , Api
       , Api.Auth
+      , Api.Category
       , Api.Error
       , Api.Match
       , Api.Message
