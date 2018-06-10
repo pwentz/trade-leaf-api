@@ -76,8 +76,8 @@ createRequest RequestRequest{..} User{..} = do
                , requestCreatedAt = time
                , requestUpdatedAt = time
                }
-       case eitherReq of
-         Left err -> throwError $ Err.apiErr (Err.E400, Err.sqlError err)
-         Right reqKey ->
-           return (Pg.fromSqlKey reqKey)
+       either
+        (throwError . Err.apiErr . (,) Err.E400 . Err.sqlError)
+        (return . Pg.fromSqlKey)
+        eitherReq
      else throwError $ Err.apiErr (Err.E401, Err.Unauthorized)
