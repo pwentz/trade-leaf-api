@@ -4,8 +4,7 @@
 module Api.OfferSpec where
 
 import Api.Error
-import           Api.Offer                   (OfferResponse (..), getOffers,
-                                              toOfferResponse, removeOffer)
+import           Api.Offer
 import           Api.Photo                   (PhotoRequest (..), createPhoto)
 import           Api.Request                 (RequestResponse (..))
 import           Api.User                    (UserRequest (..), createUser)
@@ -14,6 +13,7 @@ import           Control.Monad               (join)
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Coords                 (Coords (..))
 import           Data.Time                   (UTCTime, getCurrentTime)
+import Data.Maybe (fromJust)
 import qualified Database.Persist.Postgresql as Pg
 import qualified Db.Main                     as Db
 import           Models.Category
@@ -34,6 +34,7 @@ data DbSetup = DbSetup
   , req2Key   :: Pg.Key Request
   , photo1Key :: Pg.Key Photo
   , photo2Key :: Pg.Key Photo
+  , handyworkCategoryKey :: Pg.Key Category
   }
 
 dbSetup :: App DbSetup
@@ -59,6 +60,7 @@ dbSetup = do
     , req2Key = req2Key
     , photo1Key = photo1Key
     , photo2Key = photo2Key
+    , handyworkCategoryKey = handyCatKey
     }
 
 photo1 :: UTCTime -> Photo
@@ -125,6 +127,17 @@ spec =
             [ expectedOfferRes1 userKey offer1Key photo1Key req1Key time
             , expectedOfferRes2 userKey offer2Key photo2Key req2Key time
             ]
+      context "createOffer" $ do
+        it "creates a new offer from an OfferRequest" $ \config -> do
+          DbSetup {..} <- Spec.runAppToIO config dbSetup
+          createdOffer <- Spec.runAppToIO config $ do
+            currentUser <- fromJust <$> Db.run (Pg.get userKey) :: App User
+            offerId <-
+              createOffer
+                (OfferRequest (Pg.fromSqlKey handyworkCategoryKey) (Pg.fromSqlKey photo1Key) "i can paint some fences!" 55)
+                currentUser
+            Db.run (Pg.get $ Pg.toSqlKey offerId) :: App (Maybe Offer)
+          offerDescription <$> createdOffer `shouldBe` Just "i can paint some fences!"
       context "removeOffer" $ do
         it "throws if trying to remove an offer that doesn't belong to authed user" $ \config -> do
           DbSetup {..} <- Spec.runAppToIO config dbSetup
